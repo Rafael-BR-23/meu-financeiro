@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c0e12"/>
+      <stop offset="100%" stop-color="#181d26"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded app icon -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGrad)"/>
+  <rect width="510" height="510" x="1" y="1" rx="114" fill="none" stroke="rgba(251, 191, 36, 0.25)" stroke-width="2"/>
+
+  <!-- Glowing background effect -->
+  <circle cx="256" cy="256" r="140" fill="url(#goldGrad)" opacity="0.12" filter="url(#glow)"/>
+
+  <!-- Wallet / Finance Vault Symbol -->
+  <!-- Wallet Body -->
+  <rect x="116" y="170" width="280" height="190" rx="36" fill="#1e2430" stroke="url(#goldGrad)" stroke-width="10"/>
+  
+  <!-- Wallet Flap / Card Accent -->
+  <path d="M 116 230 L 400 230" stroke="rgba(255, 255, 255, 0.08)" stroke-width="4"/>
+
+  <!-- Gold Coin / Clasp -->
+  <circle cx="330" cy="265" r="32" fill="url(#goldGrad)" filter="url(#glow)"/>
+  <circle cx="330" cy="265" r="24" fill="#b45309"/>
+  <text x="330" y="274" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#fef3c7" text-anchor="middle">$</text>
+
+  <!-- Growth Sparkle / Arrow -->
+  <path d="M 160 300 L 210 250 L 250 280 L 300 220" fill="none" stroke="url(#emeraldGrad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="300,208 312,228 290,224" fill="#34d399"/>
+</svg>
