@@ -35,6 +35,21 @@ def parse_data_texto(texto):
 
     return None
 
+def _limpar_nome_comprovante(candidato):
+    """Descarta valores e rótulos capturados como nome pelo PDF/OCR."""
+    candidato = candidato.strip()
+    if ('r$' in candidato.lower()
+            or re.fullmatch(r'[\d.,]+(?:\s*reais)?', candidato, re.IGNORECASE)
+            or not any(char.isalpha() for char in candidato)
+            or parse_data_texto(candidato)
+            or re.match(r'^(?:(?:Valor|Total|Pago|Transferido|Quantia)(?:$|[ \t]*:|[ \t]+\d)|(?:Pagador|Origem)\b)', candidato, re.IGNORECASE)
+            or candidato.lower().rstrip(':') in {'nome', 'destino', 'para', 'conta'}
+            or 'ajudar' in candidato.lower()):
+        return ''
+    candidato = re.sub(r'(CPF|CNPJ|Chave|Institui[çc][ãa]o|Origem|Banco|Ag[êe]ncia|C[óo]digo|NSU|Autentica[çc][ãa]o).*',
+                       '', candidato, flags=re.IGNORECASE).strip()
+    return candidato[:60] if len(candidato) > 2 else ''
+
 def processar_texto_comprovante(texto, dados):
     """Aplica regras avançadas de parsing para extratos/comprovantes Nubank e outros."""
     if not texto:
@@ -65,44 +80,32 @@ def processar_texto_comprovante(texto, dados):
     if dt:
         dados['data'] = dt
 
-    # 3. Extração do Destinatário / Favorecido / Estabelecimento
-    # Padrões Nubank / Bancos: "Estabelecimento CONTA VIVO", "Favorecido", "Destinatário", "Para", "Nome do beneficiário"
-    match_dest = re.search(r'(?:Estabelecimento|Favorec(?:ido)?|Destinat[áa]rio|Benefici[áa]rio|Nome do recebedor|Recebedor)[:\s]+([^\n\r]+)', texto_clean, re.IGNORECASE)
-    if not match_dest:
-        # Tenta "Para <Nome>" evitando "Para ajudar" ou similares
-        match_dest = re.search(r'(?<!estamos aqui )\bPara[:\s]+([^\n\r]+)', texto_clean, re.IGNORECASE)
-
-    if match_dest:
-        nome_dest = match_dest.group(1).strip()
-        nome_dest = re.sub(r'^(ido|ida)\s+', '', nome_dest, flags=re.IGNORECASE).strip()
-        # Remove sufixos indesejados
-        nome_dest = re.sub(r'(CPF|CNPJ|Chave|Institui[çc][ãa]o|Origem|Banco|Ag[êe]ncia|C[óo]digo|NSU|Autentica[çc][ãa]o).*', '', nome_dest, flags=re.IGNORECASE).strip()
-        # Ignora se pegou a frase de suporte
-        if 'ajudar' not in nome_dest.lower() and len(nome_dest) > 2:
-            dados['destinatario'] = nome_dest[:60]
-
-    # Se não achou pelo regex acima, procura linha a linha
-    if not dados['destinatario']:
-        termos_busca = ['estabelecimento', 'favorecido', 'destinatário', 'destinatario']
-        for i, l in enumerate(linhas):
-            l_low = l.lower()
-            if any(k in l_low for k in termos_busca):
-                resto = re.sub(r'^(?:estabelecimento|favorecido|destinat[áa]rio|destinatario)[:\s]*', '', l, flags=re.IGNORECASE).strip()
-                if resto and len(resto) > 2 and 'ajudar' not in resto.lower():
-                    dados['destinatario'] = resto[:60]
-                    break
-                elif i + 1 < len(linhas):
-                    candidato = linhas[i+1].strip()
-                    if len(candidato) > 2 and not any(ign in candidato.lower() for ign in ['banco', 'r$', 'agência', 'conta', 'cpf', 'cnpj', 'origem', 'ajudar', 'instituição']):
-                        dados['destinatario'] = candidato[:60]
-                        break
+    # 3. Nome na própria linha do rótulo ou no bloco seguinte (PDF/OCR).
+    rotulo_destino = (r'Estabelecimento|Favorecido|Destinat[áa]rio|Destino|'
+                      r'Nome do benefici[áa]rio|Benefici[áa]rio|Nome do recebedor|Recebedor|Para')
+    for i, linha in enumerate(linhas):
+        match_dest = re.match(rf'^(?:{rotulo_destino})\b[ \t:]*([^\r\n]*)', linha, re.IGNORECASE)
+        if not match_dest:
+            continue
+        candidato = match_dest.group(1).strip()
+        seguinte = i + 1
+        if not candidato and seguinte < len(linhas):
+            candidato = linhas[seguinte]
+            seguinte += 1
+        if candidato.lower().rstrip(':') == 'nome' and seguinte < len(linhas):
+            candidato = linhas[seguinte]
+        candidato = re.sub(r'^Nome[ \t:]+', '', candidato, flags=re.IGNORECASE)
+        nome = _limpar_nome_comprovante(candidato)
+        if nome:
+            dados['destinatario'] = nome
+            break
 
     # Pagamento de fatura identifica o documento, sem um destinatário.
     match_documento = re.search(r'(?im)^[ \t]*Documento[:\s]+([^\n\r]+)', texto_clean)
     if match_documento:
-        documento = match_documento.group(1).strip()
-        if not re.match(r'(?i)^(?:Pagador|Ag[êe]ncia|Conta|CPF|CNPJ|C[óo]digo|Valor)\b', documento):
-            dados['descricao'] = documento[:60]
+        documento = _limpar_nome_comprovante(match_documento.group(1))
+        if documento:
+            dados['descricao'] = documento
 
     # 4. Tipo de Operação
     if 'pix' in texto_lower:
