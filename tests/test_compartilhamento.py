@@ -118,6 +118,20 @@ class CompartilhamentoTest(unittest.TestCase):
                                           {'destinatario': '', 'descricao': ''})
         self.assertEqual(data['descricao'], '')
 
+    def test_valor_extraido_nao_preenche_descricao_do_formulario(self):
+        for final, nome in (('', ''), ('\nFavorecido: Loja Exemplo', 'Loja Exemplo')):
+            with self.subTest(nome=nome):
+                dados = processar_texto_comprovante(
+                    'Comprovante Pix\nDestinatário\nR$ 85,32\nValor R$ 85,32' + final,
+                    {'destinatario': '', 'descricao': ''})
+                resposta = self.share('sintetico.png', return_value=dados)
+                params = parse_qs(urlsplit(resposta.location).query, keep_blank_values=True)
+                self.assertEqual(params['credor'], [nome])
+                self.assertEqual(params['valor'], ['85.32'])
+                pagina = self.client.get(resposta.location).get_data(as_text=True)
+                self.assertIn('name="credor" required placeholder="Ex: Supermercado, Farmácia, Nome Pix" value="' + nome + '"', pagina)
+                self.assertIn('name="valor" required placeholder="0,00" value="85.32"', pagina)
+
     def test_missing_or_outside_attachment_does_not_save_without_proof(self):
         page = self.client.get('/pendencias/nova?tipo=pago').get_data(as_text=True)
         token = re.search(r'name="csrf_token" value="([^"]+)"', page)[1]
