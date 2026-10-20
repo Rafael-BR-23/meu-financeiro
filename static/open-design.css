@@ -1,0 +1,101 @@
+/* Adapted from Open Design: design/open-design/assets/css/financeiro.css.
+   Keep the application's Bootstrap layout, theme switch and live data. */
+:root { --radius: 12px; --danger-text: var(--danger); --warning-text: var(--warning); --bg-sunken: var(--bg-subtle); }
+.bill-list { display: grid; gap: 8px; }
+.bill-row {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 14px;
+  padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-surface);
+}
+.bill-row[data-status="overdue"] { border-color: color-mix(in oklab, var(--danger) 30%, var(--border)); }
+.bill-row[data-status="paid"] { background: var(--bg-sunken); }
+.bill-row__info { min-width: 0; flex: 1 1 180px; }
+.bill-row__title { font-size: 0.9375rem; font-weight: 650; }
+.bill-row__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 5px; font-size: 0.75rem; color: var(--text-secondary); }
+.bill-row__side { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.bill-row__amount { font-size: 1rem; font-weight: 650; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; white-space: nowrap; }
+.bill-row__paid { font-size: 0.8125rem; font-weight: 600; color: var(--success-text); }
+@media (max-width: 520px) {
+  .bill-row__side { width: 100%; justify-content: space-between; }
+}
+
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: var(--radius-full);
+  font-size: 0.75rem; font-weight: 650; white-space: nowrap;
+}
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.pill-overdue { background: var(--danger-soft); color: var(--danger-text); }
+.pill-soon { background: var(--warning-soft); color: var(--warning-text); }
+.pill-pending { background: var(--bg-sunken); color: var(--text-secondary); }
+.pill-paid { background: var(--success-soft); color: var(--success-text); }
+.pill-accent { background: var(--accent-soft); color: var(--accent-text); }
+
+.projection-note {
+  display: flex; gap: 10px;
+  padding: 12px 14px; border-radius: var(--radius);
+  background: var(--bg-sunken); border: 1px solid var(--border);
+  font-size: 0.8125rem; color: var(--text-secondary);
+}
+.projection-note svg { width: 17px; height: 17px; flex: none; margin-top: 1px; color: var(--text-tertiary); }
+.projection-note strong { color: var(--text-primary); font-weight: 600; }
+
+
+body { background-image: none; }
+.card, .stat-card, .meta-card-rich { border-radius: 18px; }
+.page-header h1 { font-weight: 700; letter-spacing: -.025em; }
+.stat-card::before { display: none; }
+.btn { min-height: 44px; }
+.card__head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 14px; margin-bottom:14px; }
+.card__title { font-size:1.05rem; font-weight:700; margin-bottom:5px; }
+.card__hint { font-size:.8125rem; color:var(--text-secondary); }
+.finance-overview { display:grid; grid-template-columns:minmax(0, 1.4fr) repeat(2,minmax(0,1fr)); gap:14px; }
+.finance-overview .stat-card { padding:22px; display:flex; flex-direction:column; justify-content:center; gap:8px; }
+.finance-overview .stat-label { text-transform:none; letter-spacing:0; font-size:.8125rem; margin:0; font-weight:600; }
+.finance-overview .stat-value { font-size:clamp(1.5rem,2.6vw,2.25rem); font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:1.25; }
+.finance-overview .stat-sub { margin:0; line-height:1.6; font-size:.8rem; }
+.finance-overview .balance-card { background:linear-gradient(140deg,#205743,#163b34); border-color:#397a65; color:#fff; }
+.finance-overview .balance-card .stat-value { color:#fff; font-size:clamp(2rem,4vw,2.75rem); }
+.finance-overview .balance-card .stat-value.text-danger { color:#ffd1c5 !important; }
+.finance-overview .balance-footer { margin-top:0; }
+.statement-import { color:#d0e5db; font-size:.75rem; }
+.metric-link { display:inline-flex; align-items:center; gap:8px; min-height:44px; color:var(--accent); font-weight:600; font-size:.8rem; }
+.projection-card { background:var(--accent-soft); }
+.projection-note { margin-bottom:24px; align-items:flex-start; }
+.projection-note > i { flex-shrink:0; padding-top:1px; }
+.bill-list { list-style:none; padding:0; margin:0; }
+.bill-row__title { margin:0; overflow-wrap:anywhere; }
+.bill-row__side { flex-wrap:wrap; }
+.bill-row__amount { overflow-wrap:anywhere; white-space:normal; }
+.bill-row .btn { font-size:.8125rem; }
+.pill-overdue { color:var(--danger); }
+.pill-soon { color:var(--text-primary); background:var(--warning-soft); }
+.meta-card-rich { box-shadow:var(--shadow-sm); }
+.meta-card-rich .goal-amount { font-size:clamp(1.5rem,4vw,1.85rem); font-weight:700; }
+.meta-card-rich .meta-progress-track { height:8px; }
+.form-details { border-radius:12px; }
+.overview-secondary { display:flex; flex-wrap:wrap; gap:12px 24px; padding:14px 0; border-block:1px solid var(--border); }
+.overview-secondary a { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; min-height:44px; flex:1 1 240px; color:var(--text-secondary); text-decoration:none; font-size:.8125rem; }
+.overview-secondary strong { color:var(--text-primary); font-variant-numeric:tabular-nums; }
+@media (max-width:991.98px) {
+    .finance-overview { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .finance-overview .balance-card { grid-column:1 / -1; }
+    .finance-overview .stat-card { padding:16px; justify-content:flex-start; }
+    .finance-overview .stat-value { font-size:clamp(1.3rem,4.5vw,1.8rem); }
+    .finance-overview .balance-card .stat-value { font-size:2.5rem; }
+    .projection-note { font-size:.75rem; }
+}
+@media (max-width:374px) {
+    .finance-overview { grid-template-columns:minmax(0,1fr); }
+    .bill-row { padding:12px; }
+    .bill-row__side { gap:8px; }
+    .bill-row__side .btn { width:100%; }
+}
+
+/* Keep account tabs legible over Bootstrap active pills. */
+#lancamentoTab .nav-link.active {
+    background: var(--accent-soft);
+    color: var(--text-primary) !important;
+    box-shadow: inset 0 -2px var(--accent);
+}
+#lancamentoTab .nav-link.active i { color: inherit !important; }
