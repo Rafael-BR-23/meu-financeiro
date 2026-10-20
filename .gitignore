@@ -1,0 +1,60 @@
+# Ambientes e Variáveis Secretas
+.env
+.env.local
+*.env
+
+# Python / Cache
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Dados Locais e Banco de Dados
+instance/*.db
+instance/session.key
+instance/contas/
+instance/*.db-journal
+instance/*.db-wal
+instance/*.db-shm
+uploads/*
+!uploads/.gitkeep
+
+# IDEs e Ferramentas
+.vscode/
+.idea/
+.openclaude/
+.superpowers/
+
+# Extratos e Documentos Pessoais
+*.csv
+*.pdf
+
+# Private runtime, recovery copies, and session notes
+instance/
+uploads/
+.codex-backups/
+.codex-logs/
+SESSAO_ATUAL.md
+docs/superpowers/
+design/
+test_results*.txt
+test_isolamento.txt
+*.log
+*.bak
+*.backup*
+*.db
+*.db-*
+*.sqlite*
+*.key
+*.pem
+.env.*
+!.env.example
+
+# Internal working notes
+sugestoes.md
+manual.md
+VISAO_GERAL_DO_PROJETO.md
+backups/
+scratch/

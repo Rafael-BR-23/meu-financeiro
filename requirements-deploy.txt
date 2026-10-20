@@ -1,0 +1,2 @@
+# Dependência apenas do computador que executa o deploy, fora do contêiner.
+paramiko==5.0.1
