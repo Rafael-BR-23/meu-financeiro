@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Configurações - Meu Financeiro{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Configurações</h1>
+    <p>Gerencie sua conta e as formas de entrar no site.</p>
+</div>
+<div class="row g-4">
+    <div class="col-12 col-lg-5">
+        <section class="p-4 h-100" style="background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-xl)">
+            <h2 class="h5 mb-4"><i class="bi bi-person me-2"></i>Sua conta</h2>
+            <dl>
+                <dt>Nome</dt><dd>{{ user.nome }}</dd>
+                <dt>E-mail</dt><dd style="overflow-wrap:anywhere">{{ user.email }}</dd>
+            </dl>
+            <hr style="border-color:var(--border)">
+            <h3 class="h6">Acesso com Google</h3>
+            {% if user.google_sub %}
+                <p class="mb-0"><i class="bi bi-check-circle me-1" style="color:var(--success)"></i> Sua conta já está vinculada ao Google.</p>
+            {% elif google_disponivel %}
+                <p style="color:var(--text-secondary)">Vincule o Google com o mesmo e-mail para entrar sem digitar sua senha.</p>
+                <form action="{{ url_for('auth.vincular_google') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-google me-2"></i>Vincular Google</button>
+                </form>
+            {% else %}
+                <p class="mb-0" style="color:var(--text-secondary)">A entrada pelo Google estará disponível após a configuração do administrador.</p>
+            {% endif %}
+        </section>
+    </div>
+    <div class="col-12 col-lg-7">
+        <section class="p-4" style="background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-xl)">
+            <h2 class="h5"><i class="bi bi-lock me-2"></i>Trocar senha</h2>
+            <p style="color:var(--text-secondary)">Confirme sua senha atual e escolha uma nova com pelo menos 8 caracteres.</p>
+            <form action="{{ url_for('auth.configuracoes') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3"><label for="senha_atual" class="form-label">Senha atual</label><input id="senha_atual" name="senha_atual" class="form-control" type="password" autocomplete="current-password" maxlength="128" required></div>
+                <div class="mb-3"><label for="nova_senha" class="form-label">Nova senha</label><input id="nova_senha" name="nova_senha" class="form-control" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></div>
+                <div class="mb-3"><label for="confirmacao" class="form-label">Confirme a nova senha</label><input id="confirmacao" name="confirmacao" class="form-control" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></div>
+                <button class="btn btn-primary" type="submit">Salvar nova senha</button>
+            </form>
+            <p class="mt-3 mb-0" style="font-size:.875rem;color:var(--text-secondary)">Ao trocar a senha, você continua conectado aqui e as outras sessões são encerradas.</p>
+            <p class="mt-2 mb-0"><a href="{{ url_for('auth.esqueci_senha') }}">Esqueci minha senha atual</a></p>
+        </section>
+    </div>
+</div>
+{% endblock %}

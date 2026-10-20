@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% block title %}Metas Financeiras - Meu Financeiro{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between">
+    <div>
+        <h1>Metas Financeiras</h1>
+        <p>Um passo de cada vez para realizar seus planos.</p>
+    </div>
+    <a href="{{ url_for('nova_meta_form') }}" class="btn btn-primary d-inline-flex align-items-center gap-1" style="border-radius:999px; padding: 0.5rem 1rem;">
+        <i class="bi bi-plus-lg" style="font-size:0.85rem;"></i> Nova Meta
+    </a>
+</div>
+
+{% if metas %}
+<div class="row g-3">
+    {% for item in metas %}
+    {% set meta = item.meta %}
+    {% set progresso = item.progresso %}
+    {% set sugestao = item.sugestao %}
+    <div class="col-12 col-sm-6 col-xl-4">
+        <div class="meta-card-rich h-100 animate-in position-relative overflow-hidden">
+            <!-- Header -->
+            <div class="d-flex align-items-start justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:44px;height:44px;min-width:44px;border-radius:var(--radius-lg);background:var(--accent-soft);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);">
+                        <i class="bi {{ meta.icone }}" style="font-size:1.25rem;color:var(--accent);"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1rem;font-weight:800;letter-spacing:-0.01em;">{{ meta.nome }}</div>
+                        <small style="font-size:0.72rem;color:var(--text-tertiary);"><i class="bi bi-calendar-event me-1"></i>Até {{ meta.data_limite.strftime('%d/%m/%Y') }}</small>
+                    </div>
+                </div>
+                {% if meta.status == 'atrasada' %}
+                <span class="badge" style="background:var(--danger-soft);color:var(--danger);border:1px solid var(--danger);font-size:0.65rem;">Atrasada</span>
+                {% elif meta.status == 'concluida' %}
+                <span class="badge" style="background:var(--success-soft);color:var(--success);border:1px solid var(--success);font-size:0.65rem;">Concluída</span>
+                {% else %}
+                <span class="badge" style="background:var(--warning-soft);color:var(--warning);border:1px solid var(--warning);font-size:0.65rem;">Em andamento</span>
+                {% endif %}
+            </div>
+
+            <!-- Valores Acumulado / Objetivo -->
+            <div class="goal-values mb-3">
+                <div>
+                    <small class="goal-label">Você já guardou</small>
+                    <span class="goal-amount">R$ {{ (meta.valor_atual)|moeda }}</span>
+                    <span style="font-size:0.78rem;color:var(--text-tertiary);margin-left:4px;">de R$ {{ (meta.valor_objetivo)|moeda }}</span>
+                </div>
+                <span class="badge" style="background:var(--accent-soft);color:var(--accent);font-size:0.78rem;font-weight:700;padding:0.35rem 0.65rem;">
+                    {{ progresso|string|replace('.', ',') }}%
+                </span>
+            </div>
+
+            <!-- Barra Volumétrica de Progresso -->
+            <div class="meta-progress-track mb-2" title="{{ progresso }}% atingido">
+                <div class="meta-progress-fill" style="width:{{ [progresso, 100]|min }}%;background:var(--{{ 'danger' if meta.status == 'atrasada' else 'accent' }});" role="progressbar" aria-label="Progresso de {{ meta.nome }}" aria-valuenow="{{ progresso }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <small style="font-size:0.72rem;color:var(--text-tertiary);">
+                    {% if meta.valor_atual >= meta.valor_objetivo %}
+                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>Meta atingida!</span>
+                    {% else %}
+                    Faltam <strong>R$ {{ (meta.valor_objetivo - meta.valor_atual)|moeda }}</strong>
+                    {% endif %}
+                </small>
+                <small style="font-size:0.7rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;">Prioridade {{ meta.prioridade }}</small>
+            </div>
+
+            <!-- Sugestão -->
+            {% if sugestao %}
+            <div class="p-2 rounded mb-3" style="background:{{ 'var(--danger-soft)' if sugestao.tipo == 'urgente' else 'var(--info-soft)' }};font-size:0.75rem;border:1px solid {{ 'rgba(244,63,94,0.2)' if sugestao.tipo == 'urgente' else 'var(--border)' }};">
+                <i class="bi bi-lightbulb me-1" style="color:{{ 'var(--danger)' if sugestao.tipo == 'urgente' else 'var(--info)' }};"></i>
+                {% if sugestao.mensal is defined %}
+                <strong class="d-block">R$ {{ sugestao.mensal|moeda }} / mês sugeridos</strong>
+                <span>{{ sugestao.dias_restantes }} dias restantes. {{ sugestao.mensagem }}</span>
+                {% else %}{{ sugestao.mensagem }}{% endif %}
+            </div>
+            {% endif %}
+
+            {% if meta.observacao %}
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.75rem;">{{ meta.observacao }}</p>
+            {% endif %}
+
+            <!-- Ações -->
+            <div class="d-flex gap-2 mt-auto pt-2">
+                {% if meta.status != 'concluida' %}
+                <button type="button" class="btn btn-sm btn-primary flex-grow-1" style="font-size:0.82rem;font-weight:700;border-radius:var(--radius-md);"
+                        data-bs-toggle="modal" data-bs-target="#modalAporte"
+                        data-meta-id="{{ meta.id }}" data-meta-nome="{{ meta.nome }}"
+                        data-meta-faltante="{{ [meta.valor_objetivo - meta.valor_atual, 0] | max }}">
+                    <i class="bi bi-plus-circle me-1"></i> Adicionar valor
+                </button>
+                {% endif %}
+                <a href="{{ url_for('editar_meta_form', id=meta.id) }}" class="btn btn-sm btn-outline-light" style="border-radius:var(--radius-md);" title="Editar meta">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                <form action="{{ url_for('deletar_meta', id=meta.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Deletar esta meta?');" data-submit-feedback>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius:var(--radius-md);" title="Excluir meta">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card animate-in">
+    <div class="empty-state">
+        <i class="bi bi-trophy"></i>
+        <h5>Nenhuma meta cadastrada</h5>
+        <p>Crie uma meta financeira para acompanhar seu progresso.</p>
+        <a href="{{ url_for('nova_meta_form') }}" class="btn btn-primary" style="border-radius:999px;">
+            <i class="bi bi-plus-lg me-1"></i> Criar Meta
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Aporte -->
+<div class="modal fade" id="modalAporte" tabindex="-1" aria-hidden="true" aria-labelledby="modalAporte-titulo">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalAporte-titulo"><i class="bi bi-plus-circle me-2" style="color:var(--success);"></i>Adicionar valor à meta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="formAporte" action="" method="POST" data-submit-feedback>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p id="textoAporte" style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;"></p>
+                    <div class="mb-3">
+                        <label class="form-label" for="valor_aporte">Quanto você guardou? (R$) *</label>
+                        <input type="text" inputmode="numeric" data-currency-input class="form-control" id="valor_aporte" name="valor" required placeholder="0,00">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Data *</label>
+                        <input type="date" class="form-control" id="data_aporte" name="data" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Origem (opcional)</label>
+                        <input type="text" class="form-control" id="origem_aporte" name="origem" placeholder="Salário, Freelance...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observação (opcional)</label>
+                        <textarea class="form-control" id="obs_aporte" name="observacao" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Salvar valor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modalAporte');
+    modal.addEventListener('show.bs.modal', function(e) {
+        const btn = e.relatedTarget;
+        document.getElementById('textoAporte').textContent =
+            `Meta: ${btn.dataset.metaNome} — Falta ${Number(btn.dataset.metaFaltante).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}`;
+        document.getElementById('valor_aporte').value = '';
+        document.getElementById('valor_aporte').dispatchEvent(new Event('change', { bubbles: true }));
+        document.getElementById('formAporte').action = `/metas/aportar/${btn.dataset.metaId}`;
+        const hoje = new Date();
+        document.getElementById('data_aporte').value = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+    });
+});
+</script>
+{% endblock %}

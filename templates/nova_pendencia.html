@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Adicionar conta - Meu Financeiro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-7">
+
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <a href="{{ url_for('listar_pendencias') }}" class="btn btn-outline-light btn-sm" style="border-radius:999px;padding:0.375rem 0.75rem;">
+                <i class="bi bi-arrow-left" style="font-size:0.85rem;"></i>
+            </a>
+            <h1 style="font-size:1.3rem;margin:0;">Adicionar conta</h1>
+        </div>
+
+        {% if pre_dados and pre_dados.origem == 'compartilhamento' %}
+        <div class="alert alert-success d-flex align-items-center gap-2 mb-3 shadow-sm rounded-3" role="alert" style="background:var(--success-soft);border:1px solid rgba(16, 185, 129, 0.3);color:var(--success);">
+            <i class="bi bi-file-earmark-check-fill fs-4"></i>
+            <div>
+                <strong class="d-block">Comprovante Recebido!</strong>
+                <small style="color:var(--text-secondary);">O comprovante está anexado. Confira os dados e preencha os campos que não foram reconhecidos antes de salvar.</small>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tabs -->
+        {% set is_pago = (pre_dados and (pre_dados.tipo == 'pago' or pre_dados.origem == 'compartilhamento')) %}
+        <ul class="nav nav-pills mb-3 p-1 rounded-3" style="background:var(--bg-surface);border:1px solid var(--border);" id="lancamentoTab" role="tablist">
+            <li class="nav-item flex-grow-1" role="presentation">
+                <button class="nav-link {% if not is_pago %}active{% endif %} fw-semibold w-100 py-2" style="font-size:0.85rem;border-radius:var(--radius-sm);" id="tab-credito" data-bs-toggle="tab" data-bs-target="#credito" type="button" role="tab" aria-controls="credito" aria-selected="{% if not is_pago %}true{% else %}false{% endif %}">
+                    <i class="bi bi-credit-card me-1" style="color:var(--warning);"></i> A pagar
+                </button>
+            </li>
+            <li class="nav-item flex-grow-1" role="presentation">
+                <button class="nav-link {% if is_pago %}active{% endif %} fw-semibold w-100 py-2" style="font-size:0.85rem;border-radius:var(--radius-sm);" id="tab-pago" data-bs-toggle="tab" data-bs-target="#pago" type="button" role="tab" aria-controls="pago" aria-selected="{% if is_pago %}true{% else %}false{% endif %}">
+                    <i class="bi bi-check-circle me-1" style="color:var(--success);"></i> Já Pago
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- CRÉDITO -->
+            <div class="tab-pane fade {% if not is_pago %}show active{% endif %}" id="credito" role="tabpanel" aria-labelledby="tab-credito">
+                <div class="card p-3">
+                    <div class="p-2 rounded mb-3" style="background:var(--info-soft);font-size:0.8rem;color:var(--info);">
+                        <i class="bi bi-info-circle me-1"></i> Cadastre contas e boletos que você ainda precisará pagar.
+                    </div>
+
+                    <form action="{{ url_for('nova_pendencia_salvar') }}" method="POST" data-submit-feedback>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="tipo_lancamento" value="credito">
+
+                        <div class="mb-3">
+                            <label class="form-label">Descrição / estabelecimento *</label>
+                            <input type="text" class="form-control" name="credor" required placeholder="Ex: Light, Mercado Livre" value="{{ pre_dados.credor if pre_dados and not is_pago else '' }}">
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" id="label_valor_credito">Valor Total (R$) *</label>
+                                <input type="text" inputmode="numeric" data-currency-input class="form-control" id="valor_credito" name="valor" required placeholder="0,00" value="{{ pre_dados.valor if pre_dados and not is_pago else '' }}">
+                                <small class="form-text" id="help_valor_credito">Se parcelado, será dividido automaticamente.</small>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Vencimento *</label>
+                                <input type="date" class="form-control" id="data_vencimento" name="data_vencimento" required value="{{ pre_dados.data if pre_dados and not is_pago else '' }}">
+                            </div>
+                        </div>
+
+<details class="form-details mb-3"><summary>Mais detalhes <small>Cartão, parcelas e recorrência</small></summary>
+                        <div class="p-3 mb-3 rounded-3" style="background:var(--bg-subtle);border:1px solid var(--border);">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="is_assinatura" name="is_assinatura" value="1">
+                                <label class="form-check-label fw-bold" for="is_assinatura" style="font-size:0.9rem;">
+                                    <i class="bi bi-arrow-repeat me-1" style="color:var(--info);"></i> Assinatura Recorrente
+                                </label>
+                            </div>
+                            <small style="font-size:0.75rem;color:var(--text-tertiary);display:block;margin-top:0.25rem;">
+                                Cobrado todo mês na fatura até cancelar.
+                            </small>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Cartão de Crédito</label>
+                                <select class="form-select" id="cartao_id" name="cartao_id">
+                                    <option value="">Nenhum (Boleto)</option>
+                                    {% for c in cartoes %}
+                                    <option value="{{ c.id }}">{{ c.nome }} (Dia {{ c.dia_vencimento }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-6" id="container_parcelas">
+                                <label class="form-label">Parcelas</label>
+                                <select class="form-select" id="num_parcelas" name="num_parcelas">
+                                    <option value="1">1x (À vista)</option>
+                                    {% for i in range(2, 13) %}
+                                    <option value="{{ i }}">{{ i }}x</option>
+                                    {% endfor %}
+                                    <option value="18">18x</option>
+                                    <option value="24">24x</option>
+                                    <option value="36">36x</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Observação</label>
+                            <textarea class="form-control" name="observacao" rows="2" placeholder="Detalhes opcionais..."></textarea>
+                        </div>
+
+</details>
+                        <button type="submit" class="btn btn-primary w-100 py-2" style="border-radius:999px;">
+                            <i class="bi bi-clock-history me-1"></i> Salvar conta
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- JÁ PAGO -->
+            <div class="tab-pane fade {% if is_pago %}show active{% endif %}" id="pago" role="tabpanel" aria-labelledby="tab-pago">
+                <div class="card p-3">
+                    <div class="p-2 rounded mb-3" style="background:var(--success-soft);font-size:0.8rem;color:var(--success);">
+                        <i class="bi bi-check2-circle me-1"></i> Registre compras já efetuadas e anexe o recibo.
+                    </div>
+
+                    <form action="{{ url_for('nova_pendencia_salvar') }}" method="POST" enctype="multipart/form-data" data-submit-feedback>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="tipo_lancamento" value="pago">
+                        {% if pre_dados and pre_dados.comprovante_temp %}
+                        <input type="hidden" name="comprovante_temp" value="{{ pre_dados.comprovante_temp }}">
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label">Descrição / destinatário *</label>
+                            <input type="text" class="form-control" name="credor" required placeholder="Ex: Supermercado, Farmácia, Nome Pix" value="{{ pre_dados.credor if pre_dados else '' }}">
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Valor Pago (R$) *</label>
+                                <input type="text" inputmode="numeric" data-currency-input class="form-control" name="valor" required placeholder="0,00" value="{{ pre_dados.valor if pre_dados else '' }}">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Data do Pagamento *</label>
+                                <input type="date" class="form-control" id="data_pagamento" name="data_pagamento" required value="{{ pre_dados.data if pre_dados else '' }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Comprovante (Foto ou PDF)</label>
+                            {% if pre_dados and pre_dados.comprovante_temp %}
+                            <div class="d-flex align-items-center justify-content-between p-2 mb-2 rounded-3" style="background:var(--bg-subtle);border:1px dashed var(--success);">
+                                <div class="d-flex align-items-center gap-2 text-truncate">
+                                    <i class="bi bi-paperclip fs-5" style="color:var(--success);"></i>
+                                    <small class="text-truncate fw-medium" style="color:var(--text-primary);">{{ pre_dados.comprovante_temp }}</small>
+                                </div>
+                                <span class="badge bg-success-subtle text-success">Anexado</span>
+                            </div>
+                            <small class="form-text d-block mb-1">Para substituir, selecione outro arquivo abaixo:</small>
+                            {% endif %}
+                            <input type="file" class="form-control" id="comprovante_leitura" name="comprovante" accept="image/*,application/pdf">
+                            <small class="form-text" id="comprovante_status" role="status">Selecione uma imagem ou PDF para anexar e preencher os dados automaticamente.</small>
+                        </div>
+
+                        {% if not (pre_dados and pre_dados.comprovante_temp) %}
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="sem_anexo" name="sem_anexo" value="true">
+                            <label class="form-check-label" for="sem_anexo" style="font-size:0.85rem;color:var(--text-secondary);">Sem anexo (manual)</label>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label">Observação</label>
+                            <textarea class="form-control" name="observacao" rows="2" placeholder="Detalhes da compra...">{% if pre_dados and pre_dados.origem == 'compartilhamento' %}Comprovante importado via compartilhamento direto{% endif %}</textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100 py-2" style="border-radius:999px;">
+                            <i class="bi bi-file-earmark-check me-1"></i> Confirmar e Salvar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='comprovante.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const agora = new Date();
+    const hoje = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}`;
+    const venc = document.getElementById('data_vencimento');
+    const pagto = document.getElementById('data_pagamento');
+    if (venc && !venc.value) venc.value = hoje;
+    if (pagto && !pagto.value) pagto.value = hoje;
+
+    const check = document.getElementById('is_assinatura');
+    const container = document.getElementById('container_parcelas');
+    const label = document.getElementById('label_valor_credito');
+    const help = document.getElementById('help_valor_credito');
+    const parcelas = document.getElementById('num_parcelas');
+
+    if (check) {
+        check.addEventListener('change', function() {
+            if (this.checked) {
+                if (container) container.style.display = 'none';
+                if (parcelas) parcelas.value = '1';
+                if (label) label.textContent = 'Valor Mensal (R$) *';
+                if (help) help.textContent = 'Cobrança mensal recorrente.';
+            } else {
+                if (container) container.style.display = 'block';
+                if (label) label.textContent = 'Valor Total (R$) *';
+                if (help) help.textContent = 'Se parcelado, será dividido automaticamente.';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

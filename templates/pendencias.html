@@ -1,0 +1,523 @@
+{% extends 'base.html' %}
+
+{% block title %}Contas a pagar - Meu Financeiro{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header d-flex align-items-center justify-content-between">
+    <div>
+        <h1>Contas a pagar</h1>
+        <p>Contas a pagar e faturas de cartão</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-light d-none d-sm-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalCartoes" style="border-radius:999px; font-size:0.8rem;">
+            <i class="bi bi-credit-card"></i> Cartões
+        </button>
+        <a href="{{ url_for('nova_pendencia_form') }}" class="btn btn-primary d-none d-sm-inline-flex align-items-center gap-1" style="border-radius:999px; font-size:0.8rem;">
+            <i class="bi bi-plus-lg"></i> Nova
+        </a>
+    </div>
+</div>
+
+<!-- Faturas dos Cartões -->
+{% if resumo_cartoes %}
+<div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <h6 style="font-size:0.8rem;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;margin:0;">
+            <i class="bi bi-credit-card-2-front me-1" style="color:var(--accent);"></i> Cartões de Crédito
+        </h6>
+        <button type="button" class="btn btn-sm d-sm-none" data-bs-toggle="modal" data-bs-target="#modalCartoes" style="font-size:0.7rem;color:var(--text-secondary);padding:0.25rem 0.5rem;">
+            <i class="bi bi-gear"></i> Gerenciar
+        </button>
+    </div>
+    <div class="row g-3">
+        {% for c in resumo_cartoes %}
+        <div class="col-12 col-sm-6">
+            <div class="credit-card-real animate-in" 
+                 style="background: linear-gradient(135deg, {{ c.cor }} 0%, rgba(18, 22, 30, 0.95) 100%);"
+                 data-bs-toggle="modal" data-bs-target="#modalComprasCartao{{ c.id }}"
+                 title="Toque para ver os lançamentos da fatura">
+                
+                <!-- Top Row: Card Brand/Name + Contactless & Circles -->
+                <div class="d-flex justify-content-between align-items-center mb-2" style="position:relative;z-index:2;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-credit-card-2-front-fill" style="font-size:1.15rem;opacity:0.9;"></i>
+                        <span style="font-size:1rem;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:#fff;">{{ c.nome }}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-wifi" style="font-size:1.15rem;transform:rotate(90deg);opacity:0.75;display:inline-block;color:#fff;"></i>
+                        <div class="credit-card-logo-circles">
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle Row: EMV Metallic Chip & Masked Card Digits -->
+                <div class="d-flex justify-content-between align-items-center my-3" style="position:relative;z-index:2;">
+                    <div class="credit-card-chip" title="Chip EMV Seguro"></div>
+                    <div class="credit-card-num-masked">•••• •••• •••• {{ "%02d"|format(c.dia_vencimento) }}</div>
+                </div>
+
+                <!-- Bottom Row: Invoice Total & Status / Quick Pay -->
+                <div class="d-flex justify-content-between align-items-end pt-2" style="border-top:1px solid rgba(255, 255, 255, 0.18);position:relative;z-index:2;">
+                    <div>
+                        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;opacity:0.8;font-weight:600;color:#fff;">
+                            Fatura &bull; Vence {{ c.data_vencimento_fatura.strftime('%d/%m') }}
+                        </div>
+                        {% if c.qtd_itens == 0 %}
+                        <div style="font-size:1.2rem;font-weight:800;color:#a7f3d0;text-shadow:0 1px 3px rgba(0,0,0,0.4);">Em dia</div>
+                        {% elif c.status_fatura == 'atrasado' %}
+                        <div style="font-size:1.2rem;font-weight:800;color:#fecdd3;text-shadow:0 1px 3px rgba(0,0,0,0.4);">R$ {{ (c.total_fatura)|moeda }}</div>
+                        {% else %}
+                        <div style="font-size:1.2rem;font-weight:800;color:#fef08a;text-shadow:0 1px 3px rgba(0,0,0,0.4);">R$ {{ (c.total_fatura)|moeda }}</div>
+                        {% endif %}
+                        <div style="font-size:0.68rem;opacity:0.75;color:#fff;">{{ c.qtd_itens }} compra(s) na fatura</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if c.qtd_itens > 0 %}
+                            {% if c.status_fatura == 'atrasado' %}
+                            <span class="badge" style="background:rgba(239,68,68,0.3);color:#fecdd3;border:1px solid rgba(239,68,68,0.5);font-size:0.65rem;">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Atrasada
+                            </span>
+                            {% else %}
+                            <span class="badge" style="background:rgba(245,158,11,0.3);color:#fef08a;border:1px solid rgba(245,158,11,0.5);font-size:0.65rem;">
+                                <i class="bi bi-clock-fill me-1"></i>Pendente
+                            </span>
+                            {% endif %}
+                            <button type="button" class="btn btn-card-glass btn-quitar-fatura"
+                                    data-id="{{ c.id }}" data-nome="{{ c.nome }}" data-total="{{ c.total_fatura }}"
+                                    data-bs-toggle="modal" data-bs-target="#modalQuitarFatura" onclick="event.stopPropagation();">
+                                <i class="bi bi-check2-circle me-1"></i> Quitar
+                            </button>
+                        {% else %}
+                            <span class="badge" style="background:rgba(16,185,129,0.25);color:#a7f3d0;border:1px solid rgba(16,185,129,0.4);font-size:0.7rem;padding:0.45rem 0.75rem;">
+                                <i class="bi bi-check-all me-1"></i>Em dia
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Métricas -->
+{% if metricas %}
+<div class="row g-2 mb-3">
+    <div class="col-6">
+        <div class="stat-card accent-danger animate-in" style="padding:0.75rem;">
+            <span class="stat-label">Atrasadas</span>
+            <div class="stat-value text-danger" style="font-size:1.1rem;">R$ {{ (metricas.total_atrasado)|moeda }}</div>
+            <div class="stat-sub">{{ metricas.count_atrasado }} conta(s)</div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="stat-card accent-warning animate-in" style="padding:0.75rem;">
+            <span class="stat-label">Próx. 7 Dias</span>
+            <div class="stat-value text-warning" style="font-size:1.1rem;">R$ {{ (metricas.total_7dias)|moeda }}</div>
+            <div class="stat-sub">{{ metricas.count_7dias }} conta(s)</div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="stat-card accent-gold animate-in" style="padding:0.75rem;">
+            <span class="stat-label">Pendente Mês</span>
+            <div class="stat-value" style="font-size:1.1rem;color:var(--accent);">R$ {{ (metricas.total_pendente_mes)|moeda }}</div>
+            <div class="stat-sub">Previsão</div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="stat-card animate-in" style="padding:0.75rem;">
+            <span class="stat-label">Total Geral</span>
+            <div class="stat-value" style="font-size:1.1rem;">R$ {{ (metricas.total_geral)|moeda }}</div>
+            <div class="stat-sub">{{ metricas.count_geral }} item(ns)</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Filtros -->
+<div class="card p-2 mb-3 animate-in">
+    <form method="GET" action="{{ url_for('listar_pendencias') }}">
+        <div class="d-flex gap-2 mb-2">
+            <div class="input-group flex-grow-1">
+                <span class="input-group-text" style="background:var(--bg-elevated);border-color:var(--border);padding:0.5rem 0.75rem;">
+                    <i class="bi bi-search" style="font-size:0.85rem;color:var(--text-tertiary);"></i>
+                </span>
+                <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Buscar..." style="font-size:0.85rem;padding:0.5rem 0.75rem;">
+                {% if q %}
+                <a href="{{ url_for('listar_pendencias') }}" class="btn btn-outline-secondary" style="padding:0.5rem 0.625rem;"><i class="bi bi-x-lg" style="font-size:0.75rem;"></i></a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="chip-group">
+            <a href="{{ url_for('listar_pendencias', q=q, filtro='todos') }}" class="chip {% if filtro_atual == 'todos' %}active{% endif %}">Todos</a>
+            <a href="{{ url_for('listar_pendencias', q=q, filtro='atrasado') }}" class="chip {% if filtro_atual == 'atrasado' %}active{% endif %}" style="{% if filtro_atual == 'atrasado' %}background:var(--danger-soft);border-color:var(--danger);color:var(--danger);{% endif %}">Atrasados</a>
+            <a href="{{ url_for('listar_pendencias', q=q, filtro='hoje') }}" class="chip {% if filtro_atual == 'hoje' %}active{% endif %}" style="{% if filtro_atual == 'hoje' %}background:var(--warning-soft);border-color:var(--warning);color:var(--warning);{% endif %}">Hoje</a>
+            <a href="{{ url_for('listar_pendencias', q=q, filtro='proximos_7') }}" class="chip {% if filtro_atual == 'proximos_7' %}active{% endif %}">Próx. 7 Dias</a>
+            <a href="{{ url_for('listar_pendencias', q=q, filtro='mes') }}" class="chip {% if filtro_atual == 'mes' %}active{% endif %}">Neste Mês</a>
+        </div>
+    </form>
+</div>
+
+<!-- VISÃO MOBILE (Cards) -->
+<div class="d-md-none mb-4">
+    {% for p in pendencias %}
+    <div class="card p-3 mb-2 animate-in">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <div style="min-width:0;">
+                <div style="font-size:0.95rem;font-weight:700;">{{ p.credor }}</div>
+                {% if p.cartao %}
+                <span class="badge mt-1" style="background:var(--accent-soft);color:var(--accent);font-size:0.6rem;border:1px solid rgba(212,168,83,0.3);">
+                    <i class="bi bi-credit-card me-1"></i>{{ p.cartao.nome }} {% if p.total_parcelas > 1 %}({{ p.parcela_atual }}/{{ p.total_parcelas }}){% endif %}
+                </span>
+                {% endif %}
+                {% if p.observacao %}
+                <small style="font-size:0.7rem;color:var(--text-tertiary);display:block;margin-top:0.25rem;">{{ p.observacao }}</small>
+                {% endif %}
+            </div>
+            {% if p.status == 'atrasado' %}
+            <span class="badge" style="background:var(--danger-soft);color:var(--danger);font-size:0.6rem;">Atrasado</span>
+            {% else %}
+            <span class="badge" style="background:var(--warning-soft);color:var(--warning);font-size:0.6rem;">Em aberto</span>
+            {% endif %}
+        </div>
+        <div class="d-flex justify-content-between align-items-center py-2 px-2 rounded mb-2" style="background:var(--bg-subtle);border:1px solid var(--border);">
+            <div>
+                <small style="font-size:0.6rem;color:var(--text-tertiary);text-transform:uppercase;">Vencimento</small>
+                <div style="font-size:0.8rem;font-weight:500;"><i class="bi bi-calendar3 me-1" style="font-size:0.7rem;color:var(--accent);"></i>{{ p.data_vencimento.strftime('%d/%m/%Y') }}</div>
+            </div>
+            <div class="text-end">
+                <small style="font-size:0.6rem;color:var(--text-tertiary);text-transform:uppercase;">Valor</small>
+                <div class="tabular-nums" style="font-size:1rem;font-weight:700;">R$ {{ (p.valor)|moeda }}</div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-success flex-grow-1 btn-pagar py-2" style="font-size:0.8rem;border-radius:var(--radius-sm);"
+                    data-id="{{ p.id }}" data-credor="{{ p.credor }}" data-valor="{{ p.valor }}"
+                    data-bs-toggle="modal" data-bs-target="#modalPagar">
+                <i class="bi bi-check-circle me-1"></i> Pagar
+            </button>
+            <a href="{{ url_for('editar_pendencia_form', id=p.id) }}" class="btn btn-sm btn-outline-light px-3 py-2" style="border-radius:var(--radius-sm);">
+                <i class="bi bi-pencil" style="font-size:0.8rem;"></i>
+            </a>
+            <form action="{{ url_for('deletar_pendencia', id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Deletar esta pendência?');" data-submit-feedback>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger px-3 py-2" style="border-radius:var(--radius-sm);">
+                    <i class="bi bi-trash" style="font-size:0.8rem;"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+        {% if not resumo_cartoes %}
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h5>Nenhuma conta</h5>
+            <p>Nenhuma conta encontrada com os filtros selecionados.</p>
+            <a class="btn btn-primary" href="{{ url_for('nova_pendencia_form') }}">Adicionar conta</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('listar_pendencias') }}">Limpar filtros</a>
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+
+<!-- VISÃO DESKTOP (Tabela) -->
+<div class="card d-none d-md-block animate-in">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Credor</th>
+                    <th>Cartão</th>
+                    <th>Valor</th>
+                    <th>Vencimento</th>
+                    <th>Status</th>
+                    <th class="text-end" style="padding-right:1rem;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pendencias %}
+                <tr>
+                    <td>
+                        <span style="font-weight:600;">{{ p.credor }}</span>
+                        {% if p.observacao %}
+                        <small style="display:block;color:var(--text-tertiary);font-size:0.75rem;">{{ p.observacao }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if p.cartao %}
+                        <span class="badge" style="background:var(--accent-soft);color:var(--accent);font-size:0.65rem;border:1px solid rgba(212,168,83,0.3);">
+                            <i class="bi bi-credit-card me-1"></i>{{ p.cartao.nome }} {% if p.total_parcelas > 1 %}({{ p.parcela_atual }}/{{ p.total_parcelas }}){% endif %}
+                        </span>
+                        {% else %}
+                        <span style="color:var(--text-tertiary);font-size:0.8rem;">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-weight:600;">R$ {{ (p.valor)|moeda }}</td>
+                    <td>{{ p.data_vencimento.strftime('%d/%m/%Y') }}</td>
+                    <td>
+                        {% if p.status == 'atrasado' %}
+                        <span class="badge" style="background:var(--danger-soft);color:var(--danger);">Atrasado</span>
+                        {% else %}
+                        <span class="badge" style="background:var(--warning-soft);color:var(--warning);">Em aberto</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end" style="padding-right:1rem;">
+                        <button type="button" class="btn btn-sm btn-outline-light me-1 btn-pagar" style="font-size:0.75rem;"
+                                data-id="{{ p.id }}" data-credor="{{ p.credor }}" data-valor="{{ p.valor }}"
+                                data-bs-toggle="modal" data-bs-target="#modalPagar">
+                            <i class="bi bi-check-circle me-1"></i> Pagar
+                        </button>
+                        <a href="{{ url_for('editar_pendencia_form', id=p.id) }}" class="btn btn-sm btn-outline-light me-1" style="font-size:0.75rem;">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form action="{{ url_for('deletar_pendencia', id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Deletar?');" data-submit-feedback>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                    {% if not resumo_cartoes %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5" style="color:var(--text-tertiary);">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            Nenhuma conta em aberto. <a href="{{ url_for('nova_pendencia_form') }}">Adicionar conta</a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL: Gerenciar Cartões -->
+<div class="modal fade" id="modalCartoes" tabindex="-1" aria-hidden="true" aria-labelledby="modalCartoes-titulo">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalCartoes-titulo"><i class="bi bi-credit-card me-2" style="color:var(--accent);"></i>Cartões de Crédito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('novo_cartao') }}" method="POST" class="row g-2 mb-4 p-3 rounded-3" style="background:var(--bg-subtle);border:1px solid var(--border);" data-submit-feedback>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="col-12 col-sm-5">
+                        <label class="form-label">Nome do Cartão *</label>
+                        <input type="text" name="nome" class="form-control" placeholder="Ex: Nubank" required>
+                    </div>
+                    <div class="col-12 col-sm-4">
+                        <label class="form-label">Dia Vencimento *</label>
+                        <input type="number" name="dia_vencimento" class="form-control" min="1" max="31" placeholder="10" required>
+                    </div>
+                    <div class="col-12 col-sm-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg me-1"></i> Criar</button>
+                    </div>
+                </form>
+                <h6 class="fw-bold mb-3" style="font-size:0.85rem;">Cartões Cadastrados</h6>
+                {% for c in cartoes %}
+                <div class="d-flex justify-content-between align-items-center py-2 {% if not loop.last %}border-bottom{% endif %}" style="border-color:var(--border) !important;">
+                    <div>
+                        <div style="font-weight:600;"><i class="bi bi-credit-card-2-front me-2" style="color:var(--accent);"></i>{{ c.nome }}</div>
+                        <small style="color:var(--text-tertiary);">Vence dia {{ c.dia_vencimento }}</small>
+                    </div>
+                    <form action="{{ url_for('deletar_cartao', id=c.id) }}" method="POST" onsubmit="return confirm('Remover este cartão?');" data-submit-feedback>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;"><i class="bi bi-trash"></i></button>
+                    </form>
+                </div>
+                {% else %}
+                <p style="color:var(--text-tertiary);text-align:center;padding:1rem 0;">Nenhum cartão cadastrado.</p>
+                {% endfor %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAIS: Detalhes por Cartão -->
+{% for c in resumo_cartoes %}
+<div class="modal fade" id="modalComprasCartao{{ c.id }}" tabindex="-1" aria-hidden="true" aria-labelledby="modalComprasCartao{{ c.id }}-titulo">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold" id="modalComprasCartao{{ c.id }}-titulo"><i class="bi bi-credit-card-2-front me-2" style="color:var(--accent);"></i>{{ c.nome }}</h5>
+                    <small style="color:var(--text-tertiary);">Vence {{ c.data_vencimento_fatura.strftime('%d/%m/%Y') }}</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="p-2 rounded text-center" style="background:var(--success-soft);border:1px solid rgba(52,211,153,0.2);">
+                            <small style="font-size:0.65rem;color:var(--text-tertiary);text-transform:uppercase;">Fatura Atual</small>
+                            <div style="font-size:1.1rem;font-weight:700;color:var(--success);">R$ {{ (c.total_fatura)|moeda }}</div>
+                            <small style="font-size:0.65rem;color:var(--text-tertiary);">{{ c.qtd_itens }} item(ns)</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 rounded text-center" style="background:var(--warning-soft);border:1px solid rgba(251,191,36,0.2);">
+                            <small style="font-size:0.65rem;color:var(--text-tertiary);text-transform:uppercase;">Total Devedor</small>
+                            <div style="font-size:1.1rem;font-weight:700;color:var(--warning);">R$ {{ (c.total_devedor)|moeda }}</div>
+                            <small style="font-size:0.65rem;color:var(--text-tertiary);">{{ c.qtd_itens_total }} parcela(s)</small>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="nav nav-pills mb-3" style="gap:0.5rem;">
+                    <li class="nav-item">
+                        <button class="nav-link active py-2 px-3" style="font-size:0.8rem;border-radius:999px;" data-bs-toggle="pill" data-bs-target="#content-fatura-{{ c.id }}">
+                            <i class="bi bi-calendar-check me-1"></i> Fatura ({{ c.qtd_itens }})
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link py-2 px-3" style="font-size:0.8rem;border-radius:999px;" data-bs-toggle="pill" data-bs-target="#content-todas-{{ c.id }}">
+                            <i class="bi bi-layers me-1"></i> Todas ({{ c.qtd_itens_total }})
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="content-fatura-{{ c.id }}">
+                        {% for item in c.itens %}
+                        <div class="d-flex justify-content-between align-items-center py-2 {% if not loop.last %}border-bottom{% endif %}" style="border-color:var(--border) !important;">
+                            <div>
+                                <span style="font-weight:600;font-size:0.85rem;">{{ item.credor }}</span>
+                                {% if item.is_assinatura %}
+                                <span class="badge ms-1" style="background:var(--info-soft);color:var(--info);font-size:0.55rem;"><i class="bi bi-arrow-repeat"></i> Assinatura</span>
+                                {% endif %}
+                                {% if item.observacao %}
+                                <small style="display:block;color:var(--text-tertiary);font-size:0.7rem;">{{ item.observacao }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="font-weight:600;font-size:0.85rem;color:var(--success);">R$ {{ (item.valor)|moeda }}</span>
+                                {% if item.is_assinatura and item.assinatura_ativa %}
+                                <form action="{{ url_for('cancelar_assinatura', id=item.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancelar assinatura?');" data-submit-feedback>
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" style="font-size:0.65rem;padding:0.2rem 0.4rem;" title="Cancelar"><i class="bi bi-x-circle"></i></button>
+                                </form>
+                                {% endif %}
+                                <a href="{{ url_for('editar_pendencia_form', id=item.id) }}" class="btn btn-sm btn-outline-light" style="font-size:0.65rem;padding:0.2rem 0.4rem;"><i class="bi bi-pencil"></i></a>
+                                <form action="{{ url_for('deletar_pendencia', id=item.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apagar?');" data-submit-feedback>
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:0.65rem;padding:0.2rem 0.4rem;"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p style="color:var(--text-tertiary);text-align:center;padding:1rem 0;">Nenhuma compra nesta fatura.</p>
+                        {% endfor %}
+                    </div>
+                    <div class="tab-pane fade" id="content-todas-{{ c.id }}">
+                        {% for item in c.todos_itens %}
+                        <div class="d-flex justify-content-between align-items-center py-2 {% if not loop.last %}border-bottom{% endif %}" style="border-color:var(--border) !important;">
+                            <div>
+                                <span style="font-weight:600;font-size:0.85rem;">{{ item.credor }}</span>
+                                {% if item.is_assinatura %}
+                                <span class="badge ms-1" style="background:var(--info-soft);color:var(--info);font-size:0.55rem;"><i class="bi bi-arrow-repeat"></i></span>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="font-weight:600;font-size:0.85rem;color:var(--warning);">R$ {{ (item.valor)|moeda }}</span>
+                                <small style="color:var(--text-tertiary);font-size:0.7rem;">{{ item.data_vencimento.strftime('%d/%m/%y') }}</small>
+                                {% if item.is_assinatura and item.assinatura_ativa %}
+                                <form action="{{ url_for('cancelar_assinatura', id=item.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancelar?');" data-submit-feedback>
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" style="font-size:0.65rem;padding:0.2rem 0.4rem;"><i class="bi bi-x-circle"></i></button>
+                                </form>
+                                {% endif %}
+                                <a href="{{ url_for('editar_pendencia_form', id=item.id) }}" class="btn btn-sm btn-outline-light" style="font-size:0.65rem;padding:0.2rem 0.4rem;"><i class="bi bi-pencil"></i></a>
+                                <form action="{{ url_for('deletar_pendencia', id=item.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apagar?');" data-submit-feedback>
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:0.65rem;padding:0.2rem 0.4rem;"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p style="color:var(--text-tertiary);text-align:center;padding:1rem 0;">Nenhuma compra cadastrada.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Fechar</button>
+                {% if c.qtd_itens > 0 %}
+                <button type="button" class="btn btn-success btn-quitar-fatura" style="border-radius:999px;"
+                        data-id="{{ c.id }}" data-nome="{{ c.nome }}" data-total="{{ c.total_fatura }}"
+                        data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalQuitarFatura">
+                    <i class="bi bi-check-circle me-1"></i> Quitar (R$ {{ (c.total_fatura)|moeda }})
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- MODAL: Quitar Fatura -->
+<div class="modal fade" id="modalQuitarFatura" tabindex="-1" aria-hidden="true" aria-labelledby="modalQuitarFatura-titulo">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalQuitarFatura-titulo">Quitar Fatura</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="formQuitarFatura" action="" method="POST" enctype="multipart/form-data" data-submit-feedback>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p style="font-size:0.9rem;margin-bottom:1rem;">
+                        Quitando fatura do <strong id="modalCartaoNome"></strong> — <strong id="modalCartaoTotal" style="color:var(--success);"></strong>
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label">Data de Pagamento</label>
+                        <input type="date" class="form-control" id="data_pagamento_fatura" name="data_pagamento" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comprovante</label>
+                        <input type="file" class="form-control" id="comprovante_fatura" name="comprovante" accept="image/*,application/pdf" capture="environment">
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="sem_anexo_fatura" name="sem_anexo" value="true">
+                        <label class="form-check-label" for="sem_anexo_fatura" style="font-size:0.85rem;color:var(--text-secondary);">Sem anexo (manual)</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Confirmar Pagamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% include '_pagamento.html' %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Quitar Fatura
+    document.querySelectorAll('.btn-quitar-fatura').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('modalCartaoNome').textContent = this.dataset.nome;
+            document.getElementById('modalCartaoTotal').textContent = Number(this.dataset.total).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+            document.getElementById('formQuitarFatura').action = `/cartoes/quitar_fatura/${this.dataset.id}`;
+            document.getElementById('data_pagamento_fatura').value = new Date().toISOString().split('T')[0];
+        });
+    });
+
+
+});
+</script>
+{% endblock %}

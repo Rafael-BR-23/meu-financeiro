@@ -1,0 +1,376 @@
+{% extends 'base.html' %}
+
+{% block title %}Transações - Meu Financeiro{% endblock %}
+
+{% block content %}
+<div class="page-header mb-3">
+    <h1>Transações</h1>
+    <p>Entradas e saídas do extrato importado</p>
+</div>
+
+<!-- Fechamento -->
+{% if fechamento %}
+<div class="card card-fechamento mb-3 animate-in">
+    <div class="card-body p-3 p-md-4">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-calendar-check" style="color:var(--accent);"></i>
+            <span class="stat-label" style="color:var(--accent);margin:0;">Fechamento {{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][fechamento.mes - 1] }}/{{ fechamento.ano }}</span>
+        </div>
+        <div class="row g-2">
+            <div class="col-6 col-sm-3">
+                <div class="p-2 p-md-3 rounded-3" style="background:var(--bg-subtle);border:1px solid var(--border);">
+                    <small style="font-size:0.65rem;color:var(--text-tertiary);text-transform:uppercase;font-weight:600;">Inicial</small>
+                    <div class="tabular-nums" style="font-size:0.9rem;font-weight:700;">R$ {{ (fechamento.saldo_inicial)|moeda }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-3">
+                <div class="p-2 p-md-3 rounded-3" style="background:var(--success-soft);border:1px solid var(--border);">
+                    <small style="font-size:0.65rem;color:var(--text-tertiary);text-transform:uppercase;font-weight:600;">Entradas</small>
+                    <div class="tabular-nums" style="font-size:0.9rem;font-weight:700;color:var(--success);">R$ {{ (fechamento.total_entradas)|moeda }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-3">
+                <div class="p-2 p-md-3 rounded-3" style="background:var(--danger-soft);border:1px solid var(--border);">
+                    <small style="font-size:0.65rem;color:var(--text-tertiary);text-transform:uppercase;font-weight:600;">Saídas</small>
+                    <div class="tabular-nums" style="font-size:0.9rem;font-weight:700;color:var(--danger);">R$ {{ (fechamento.total_saidas)|moeda }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-3">
+                <div class="p-2 p-md-3 rounded-3" style="background:var(--bg-subtle);border:1px solid var(--border);">
+                    <small style="font-size:0.65rem;color:var(--text-tertiary);text-transform:uppercase;font-weight:600;">Final</small>
+                    <div class="tabular-nums" style="font-size:0.9rem;font-weight:700;">R$ {{ (fechamento.saldo_final)|moeda }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Resumo -->
+<div class="row g-2 mb-3">
+    <div class="col-4">
+        <div class="stat-card accent-success animate-in p-2 p-md-3">
+            <span class="stat-label">Entradas</span>
+            <div class="stat-value text-success tabular-nums" style="font-size:1.05rem;">R$ {{ (total_entradas)|moeda }}</div>
+        </div>
+    </div>
+    <div class="col-4">
+        <div class="stat-card accent-danger animate-in p-2 p-md-3">
+            <span class="stat-label">Saídas</span>
+            <div class="stat-value text-danger tabular-nums" style="font-size:1.05rem;">R$ {{ (total_saidas)|moeda }}</div>
+        </div>
+    </div>
+    <div class="col-4">
+        <div class="stat-card accent-gold animate-in p-2 p-md-3">
+            <span class="stat-label">Saldo</span>
+            <div class="stat-value {{ 'text-success' if saldo >= 0 else 'text-danger' }} tabular-nums" style="font-size:1.05rem;">R$ {{ (saldo)|moeda }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card p-3 mb-3 animate-in">
+    <form method="GET">
+        <div class="mb-3">
+            <label class="form-label" for="busca-transacoes">Buscar descrição</label>
+            <input class="form-control" id="busca-transacoes" type="search" name="q" value="{{ filtro_q }}" placeholder="Ex.: mercado, salário, Pix…">
+        </div>
+        <input type="hidden" name="sort" value="{{ sort }}">
+        <input type="hidden" name="sort_dir" value="{{ sort_dir }}">
+        <details class="form-details">
+        <summary>Mais filtros <small>Período, tipo e categoria</small></summary>
+        <div class="mb-3">
+            <label class="form-label" for="filtro-categoria">Categoria</label>
+            <select class="form-select" id="filtro-categoria" name="categoria">
+                <option value="">Todas as categorias</option>
+                {% for cat in categorias %}<option value="{{ cat.id }}" {% if filtro_categoria == cat.id|string %}selected{% endif %}>{{ cat.nome }} · {{ cat.credor }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="row g-2">
+            <div class="col-6 col-sm-3">
+                <label class="form-label" style="font-size:0.75rem;">Mês/Ano</label>
+                <input type="month" name="mes" class="form-control" value="{{ filtro_mes or '' }}">
+            </div>
+            <div class="col-6 col-sm-3">
+                <label class="form-label" style="font-size:0.75rem;">Tipo</label>
+                <select name="tipo" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="entrada" {% if filtro_tipo == 'entrada' %}selected{% endif %}>Entradas</option>
+                    <option value="saida" {% if filtro_tipo == 'saida' %}selected{% endif %}>Saídas</option>
+                </select>
+            </div>
+            <div class="col-6 col-sm-3">
+                <label class="form-label" for="filtro-data-inicio" style="font-size:0.75rem;">Data Início</label>
+                <input type="date" name="data_inicio" id="filtro-data-inicio" class="form-control" value="{{ filtro_data_inicio or '' }}">
+            </div>
+            <div class="col-6 col-sm-3">
+                <label class="form-label" for="filtro-data-fim" style="font-size:0.75rem;">Data Fim</label>
+                <input type="date" name="data_fim" id="filtro-data-fim" class="form-control" value="{{ filtro_data_fim or '' }}">
+            </div>
+        </div>
+        <p class="form-text mt-2">Ao selecionar um mês, o intervalo de datas é desconsiderado.</p>
+        </details>
+        <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary flex-grow-1" style="border-radius:var(--radius-full);">
+                <i class="bi bi-funnel me-1"></i> Filtrar
+            </button>
+            <a href="{{ url_for('listar_transacoes') }}" class="btn btn-outline-secondary" style="border-radius:var(--radius-full);" title="Limpar Filtros"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</div>
+
+<!-- HELPER: Category Bubble Macro -->
+<div class="filter-summary" aria-label="Filtros ativos">
+    <span>{{ transacoes|length }} resultado(s)</span>
+    {% for chave, valor in [('q', filtro_q), ('mes', filtro_mes), ('tipo', filtro_tipo), ('data_inicio', filtro_data_inicio if not filtro_mes else ''), ('data_fim', filtro_data_fim if not filtro_mes else '')] %}
+    {% if valor %}<a href="{{ url_filtro(**{chave: None}) }}" class="filter-chip" aria-label="Remover filtro {{ chave }}: {{ valor }}">{{ {'q':'Busca', 'mes':'Mês', 'tipo':'Tipo', 'data_inicio':'De', 'data_fim':'Até'}[chave] }}: {{ {'entrada':'Entradas', 'saida':'Saídas'}.get(valor, valor) }} <i class="bi bi-x"></i></a>{% endif %}
+    {% endfor %}
+    {% if filtro_categoria %}{% for cat in categorias if cat.id|string == filtro_categoria %}<a class="filter-chip" href="{{ url_filtro(categoria=None) }}">{{ cat.nome }} <i class="bi bi-x"></i><span class="visually-hidden">Remover categoria</span></a>{% endfor %}{% endif %}
+</div>
+{% macro render_category_bubble(t, mini=false) %}
+    {% set cat_nome = (t.categoria.nome if t.categoria else '') | lower %}
+    {% set desc = t.descricao | lower %}
+    {% if t.tipo == 'entrada' or 'salario' in cat_nome or 'rendimento' in cat_nome or 'salário' in cat_nome %}
+        {% set bg = 'rgba(16, 185, 129, 0.15)' %}
+        {% set col = '#10b981' %}
+        {% set ico = 'bi-arrow-down-left' %}
+    {% elif 'aliment' in cat_nome or 'restaurante' in cat_nome or 'comida' in cat_nome or 'lanche' in cat_nome or 'ifood' in desc or 'padaria' in desc %}
+        {% set bg = 'rgba(249, 115, 22, 0.15)' %}
+        {% set col = '#f97316' %}
+        {% set ico = 'bi-cup-hot-fill' %}
+    {% elif 'mercado' in cat_nome or 'supermercado' in cat_nome or 'feira' in cat_nome or 'mercado' in desc %}
+        {% set bg = 'rgba(16, 185, 129, 0.15)' %}
+        {% set col = '#10b981' %}
+        {% set ico = 'bi-cart-fill' %}
+    {% elif 'transporte' in cat_nome or 'uber' in cat_nome or 'combustivel' in cat_nome or 'posto' in cat_nome or 'uber' in desc or '99' in desc or 'gas' in desc %}
+        {% set bg = 'rgba(6, 182, 212, 0.15)' %}
+        {% set col = '#06b6d4' %}
+        {% set ico = 'bi-car-front-fill' %}
+    {% elif 'lazer' in cat_nome or 'entretenimento' in cat_nome or 'cinema' in cat_nome or 'streaming' in cat_nome or 'netflix' in desc or 'spotify' in desc %}
+        {% set bg = 'rgba(168, 85, 247, 0.15)' %}
+        {% set col = '#a855f7' %}
+        {% set ico = 'bi-controller' %}
+    {% elif 'saude' in cat_nome or 'saúde' in cat_nome or 'farmacia' in cat_nome or 'farmácia' in cat_nome or 'medico' in cat_nome or 'drogaria' in desc %}
+        {% set bg = 'rgba(244, 63, 94, 0.15)' %}
+        {% set col = '#f43f5e' %}
+        {% set ico = 'bi-heart-pulse-fill' %}
+    {% elif 'moradia' in cat_nome or 'aluguel' in cat_nome or 'casa' in cat_nome or 'condominio' in cat_nome or 'energia' in desc or 'luz' in desc or 'agua' in desc %}
+        {% set bg = 'rgba(245, 158, 11, 0.15)' %}
+        {% set col = '#f59e0b' %}
+        {% set ico = 'bi-house-fill' %}
+    {% else %}
+        {% set bg = 'rgba(244, 63, 94, 0.12)' if t.tipo != 'entrada' else 'rgba(16, 185, 129, 0.12)' %}
+        {% set col = 'var(--danger)' if t.tipo != 'entrada' else 'var(--success)' %}
+        {% set ico = 'bi-arrow-up-right' if t.tipo != 'entrada' else 'bi-arrow-down-left' %}
+    {% endif %}
+    <div class="category-bubble {% if mini %}category-bubble-sm{% endif %}" style="background:{{ bg }};color:{{ col }};{% if mini %}width:32px;height:32px;min-width:32px;font-size:0.9rem;{% endif %}">
+        <i class="bi {{ ico }}"></i>
+    </div>
+{% endmacro %}
+
+<!-- VISÃO MOBILE -->
+<div class="d-md-none mb-4">
+    {% for t in transacoes %}
+    {% if sort == 'data' and loop.changed(t.data) %}
+    <h2 class="transaction-day">{{ t.data.strftime('%d/%m/%Y') }}</h2>
+    {% endif %}
+    <div class="transaction-card-rich animate-in">
+        <div class="d-flex align-items-center gap-3">
+            {{ render_category_bubble(t) }}
+            <div style="min-width:0;flex:1;">
+                <div style="font-size:0.92rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary);">
+                    {{ t.descricao }}
+                </div>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <small style="font-size:0.72rem;color:var(--text-tertiary);">{{ t.data.strftime('%d/%m/%Y') }}</small>
+                    {% if t.conciliado %}
+                    <span style="font-size:0.75rem;color:var(--success);" title="Conciliado com pendência"><i class="bi bi-check-circle-fill"></i></span>
+                    {% endif %}
+                    <button type="button" class="btn btn-sm cat-btn p-0 border-0 text-start"
+                            data-id="{{ t.id }}" data-categoria="{% if t.categoria %}{{ t.categoria.id }}{% endif %}" data-descricao="{{ t.descricao }}"
+                            data-bs-toggle="modal" data-bs-target="#modalCategorizar">
+                        {% if t.categoria %}
+                        <span class="badge" style="background:var(--accent-soft);color:var(--accent);font-size:0.68rem;padding:0.22rem 0.55rem;">{{ t.categoria.nome }}</span>
+                        {% else %}
+                        <span class="badge" style="background:var(--bg-subtle);color:var(--text-tertiary);border:1px dashed var(--border);font-size:0.65rem;padding:0.2rem 0.5rem;">
+                            <i class="bi bi-tag me-1"></i>+ Categoria
+                        </span>
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+            <div class="text-end">
+                <span class="tabular-nums" style="font-size:1.05rem;font-weight:800;color:{{ 'var(--success)' if t.tipo == 'entrada' else 'var(--danger)' }};white-space:nowrap;">
+                    <small>{{ 'Entrada' if t.tipo == 'entrada' else 'Saída' }}</small> {{ '+' if t.tipo == 'entrada' else '-' }}R$ {{ (t.valor|abs)|moeda }}
+                </span>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-receipt"></i>
+        <h5>Nenhuma transação</h5>
+        <p>Importe um extrato ou ajuste os filtros para encontrar suas movimentações.</p>
+        <a class="btn btn-primary" href="{{ url_for('importar_page') }}">Importar extrato</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('listar_transacoes') }}">Limpar filtros</a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- VISÃO DESKTOP -->
+<div class="card d-none d-md-block animate-in overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>
+                        <a href="{{ url_filtro(sort='data', sort_dir='asc' if sort == 'data' and sort_dir == 'desc' else 'desc') }}" style="color:var(--text-tertiary);text-decoration:none;">
+                            Data <i class="bi {% if sort == 'data' %}{% if sort_dir == 'asc' %}bi-caret-up-fill{% else %}bi-caret-down-fill{% endif %}{% endif %}"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="{{ url_filtro(sort='descricao', sort_dir='asc' if sort == 'descricao' and sort_dir == 'desc' else 'desc') }}" style="color:var(--text-tertiary);text-decoration:none;">
+                            Descrição <i class="bi {% if sort == 'descricao' %}{% if sort_dir == 'asc' %}bi-caret-up-fill{% else %}bi-caret-down-fill{% endif %}{% endif %}"></i>
+                        </a>
+                    </th>
+                    <th>Tipo</th>
+                    <th>
+                        <a href="{{ url_filtro(sort='categoria', sort_dir='asc' if sort == 'categoria' and sort_dir == 'desc' else 'desc') }}" style="color:var(--text-tertiary);text-decoration:none;">
+                            Categoria <i class="bi {% if sort == 'categoria' %}{% if sort_dir == 'asc' %}bi-caret-up-fill{% else %}bi-caret-down-fill{% endif %}{% endif %}"></i>
+                        </a>
+                    </th>
+                    <th class="text-end">
+                        <a href="{{ url_filtro(sort='valor', sort_dir='asc' if sort == 'valor' and sort_dir == 'desc' else 'desc') }}" style="color:var(--text-tertiary);text-decoration:none;">
+                            Valor <i class="bi {% if sort == 'valor' %}{% if sort_dir == 'asc' %}bi-caret-up-fill{% else %}bi-caret-down-fill{% endif %}{% endif %}"></i>
+                        </a>
+                    </th>
+                    <th class="text-center">Conc.</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transacoes %}
+                {% if sort == 'data' and loop.changed(t.data) %}
+                <tr><th colspan="6" scope="rowgroup" class="transaction-day">{{ t.data.strftime('%d/%m/%Y') }}</th></tr>
+                {% endif %}
+                <tr>
+                    <td>{{ t.data.strftime('%d/%m/%Y') }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            {{ render_category_bubble(t, mini=true) }}
+                            <div>
+                                <span class="fw-semibold">{{ t.descricao }}</span>
+                                {% if t.arquivo_original %}
+                                <small style="display:block;color:var(--text-tertiary);font-size:0.7rem;">{{ t.arquivo_original }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if t.tipo == 'entrada' %}
+                        <span class="badge" style="background:var(--success-soft);color:var(--success);">Entrada</span>
+                        {% else %}
+                        <span class="badge" style="background:var(--danger-soft);color:var(--danger);">Saída</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none text-start cat-btn"
+                                data-id="{{ t.id }}" data-categoria="{% if t.categoria %}{{ t.categoria.id }}{% endif %}" data-descricao="{{ t.descricao }}"
+                                data-bs-toggle="modal" data-bs-target="#modalCategorizar">
+                            {% if t.categoria %}
+                            <span class="badge" style="background:var(--accent-soft);color:var(--accent);">{{ t.categoria.nome }}</span>
+                            {% else %}
+                            <span class="badge" style="background:var(--bg-elevated);color:var(--text-tertiary);"><i class="bi bi-tag me-1"></i>Categorizar</span>
+                            {% endif %}
+                        </button>
+                    </td>
+                    <td class="text-end fw-bold tabular-nums" style="color:{{ 'var(--success)' if t.tipo == 'entrada' else 'var(--danger)' }};">
+                        <small>{{ 'Entrada' if t.tipo == 'entrada' else 'Saída' }}</small> {{ '+' if t.tipo == 'entrada' else '-' }}R$ {{ (t.valor|abs)|moeda }}
+                    </td>
+                    <td class="text-center">
+                        {% if t.conciliado %}
+                        <i class="bi bi-check-circle-fill" style="color:var(--success);"></i>
+                        {% else %}
+                        <i class="bi bi-dash-circle" style="color:var(--text-tertiary);"></i>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-5" style="color:var(--text-tertiary);">
+                        <i class="bi bi-receipt fs-1 d-block mb-2"></i>
+                        Nenhuma transação encontrada. Ajuste os filtros ou
+                        <a href="{{ url_for('importar_page') }}">importe um extrato</a>.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if transacoes %}
+<div class="mt-2 text-center" style="color:var(--text-tertiary);font-size:0.8rem;">
+    {{ transacoes|length }} transação(ões) encontrada(s)
+</div>
+{% endif %}
+
+<!-- Modal Categorizar -->
+<div class="modal fade" id="modalCategorizar" tabindex="-1" aria-hidden="true" aria-labelledby="modalCategorizar-titulo">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalCategorizar-titulo"><i class="bi bi-tag me-2" style="color:var(--accent);"></i>Categorizar</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="formCategorizar" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p id="textoTransacao" style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;"></p>
+                    <div class="mb-3">
+                        <label class="form-label">Categoria</label>
+                        <select class="form-select" id="categoria_select" name="categoria_id" required>
+                            <option value="">Selecione...</option>
+                            {% for cat in categorias %}
+                            <option value="{{ cat.id }}">{{ cat.nome }} ({{ cat.credor }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" id="btnRemoverCategoria" style="font-size:0.8rem;">Remover</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modalCategorizar');
+    const form = document.getElementById('formCategorizar');
+    const texto = document.getElementById('textoTransacao');
+    const select = document.getElementById('categoria_select');
+    const btnRemover = document.getElementById('btnRemoverCategoria');
+
+    if (modal) {
+        modal.addEventListener('show.bs.modal', function(e) {
+            const btn = e.relatedTarget;
+            texto.textContent = btn.dataset.descricao;
+            form.action = `/transacoes/categorizar/${btn.dataset.id}`;
+            select.value = btn.dataset.categoria || '';
+            btnRemover.style.display = btn.dataset.categoria ? 'inline-block' : 'none';
+        });
+    }
+
+    if (btnRemover) {
+        btnRemover.addEventListener('click', function() {
+            select.value = '';
+            form.submit();
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

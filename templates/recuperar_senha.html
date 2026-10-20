@@ -1,0 +1,31 @@
+{% extends 'login.html' %}
+{% block titulo %}{{ 'Redefinir senha' if redefinir else 'Recuperar senha' }}{% endblock %}
+{% block formulario %}
+<h1>{{ 'Crie uma nova senha.' if redefinir else 'Esqueceu sua senha?' }}</h1>
+{% for category, message in get_flashed_messages(with_categories=true) %}<p class="alert" {% if category == 'success' %}role="status" aria-live="polite"{% else %}role="alert"{% endif %}>{{ message }}</p>{% endfor %}
+{% if invalido %}
+    <p class="alert" role="alert">Este link é inválido, expirou ou já foi utilizado.</p>
+    <p><a href="{{ url_for('auth.esqueci_senha') }}">Pedir um novo link</a></p>
+{% elif enviado %}
+    <p role="status" aria-live="polite">Se este e-mail estiver cadastrado, enviaremos um link para redefinir sua senha. Confira sua caixa de entrada e a pasta de spam.</p>
+{% elif redefinir %}
+    <p>Escolha uma senha de pelo menos 8 caracteres para acessar sua conta.</p>
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="senha">Nova senha</label><input id="senha" name="senha" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+        <label for="confirmacao">Confirme a nova senha</label><input id="confirmacao" name="confirmacao" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+        <button class="primary" type="submit">Salvar nova senha</button>
+    </form>
+{% elif not disponivel %}
+    <p class="alert" role="status">A recuperação por e-mail estará disponível após a configuração do envio pelo administrador.</p>
+    <p>Se sua conta usa Google, você pode entrar pela opção “Entrar com Google”.</p>
+{% else %}
+    <p>Informe o e-mail da sua conta. O link de recuperação vale por 30 minutos.</p>
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="email" maxlength="254" required>
+        <button class="primary" type="submit">Enviar link de recuperação</button>
+    </form>
+{% endif %}
+<p><a href="{{ url_for('auth.login') }}">Voltar para entrar</a></p>
+{% endblock %}

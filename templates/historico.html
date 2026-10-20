@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+
+{% block title %}Comprovantes - Meu Financeiro{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between">
+    <div>
+        <h1>Comprovantes</h1>
+        <p>Contas quitadas e comprovantes</p>
+    </div>
+    <div class="stat-card accent-success animate-in d-none d-sm-block" style="padding:0.5rem 1rem;">
+        <span class="stat-label">Total Pago</span>
+        <div class="stat-value text-success" style="font-size:1.1rem;">R$ {{ (total_pago if total_pago else 0.0)|moeda }}</div>
+    </div>
+</div>
+
+<!-- Mobile total -->
+<div class="d-sm-none mb-3">
+    <div class="stat-card accent-success animate-in" style="padding:0.75rem;">
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="stat-label" style="margin:0;">Total Pago (Filtrado)</span>
+            <span class="stat-value text-success" style="font-size:1.1rem;">R$ {{ (total_pago if total_pago else 0.0)|moeda }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card p-2 mb-3 animate-in">
+    <form method="GET" action="{{ url_for('listar_historico') }}">
+        <div class="d-flex gap-2 mb-2">
+            <div class="input-group flex-grow-1">
+                <span class="input-group-text" style="background:var(--bg-elevated);border-color:var(--border);padding:0.5rem 0.75rem;">
+                    <i class="bi bi-search" style="font-size:0.85rem;color:var(--text-tertiary);"></i>
+                </span>
+                <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Buscar credor..." style="font-size:0.85rem;padding:0.5rem 0.75rem;">
+            </div>
+            <div style="min-width:140px;">
+                <input type="month" name="mes" value="{{ mes_filtro }}" class="form-control" style="font-size:0.85rem;padding:0.5rem 0.75rem;">
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1" style="font-size:0.8rem;border-radius:999px;">
+                <i class="bi bi-filter me-1"></i> Filtrar
+            </button>
+            {% if q or mes_filtro %}
+            <a href="{{ url_for('listar_historico') }}" class="btn btn-outline-secondary" style="border-radius:999px;"><i class="bi bi-x-lg"></i></a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- VISÃO MOBILE -->
+<div class="d-md-none mb-4">
+    {% for p in pagos %}
+    <div class="card p-3 mb-2 animate-in">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <div style="min-width:0;">
+                <div style="font-size:0.95rem;font-weight:700;">{{ p.credor }}</div>
+                {% if p.observacao %}
+                <small style="font-size:0.7rem;color:var(--text-tertiary);display:block;margin-top:0.125rem;">
+                    <i class="bi bi-chat-left-text me-1" style="color:var(--info);"></i>{{ p.observacao }}
+                </small>
+                {% endif %}
+                <small style="font-size:0.7rem;color:var(--success);display:block;margin-top:0.25rem;">
+                    <i class="bi bi-check-circle-fill me-1"></i>Pago em {{ p.data_pagamento.strftime('%d/%m/%Y') if p.data_pagamento else '-' }}
+                </small>
+            </div>
+            <span style="font-size:1rem;font-weight:700;">R$ {{ (p.valor)|moeda }}</span>
+        </div>
+        <div class="d-flex align-items-center justify-content-between py-2 px-2 rounded mb-2" style="background:var(--bg-subtle);border:1px solid var(--border);">
+            <small style="font-size:0.7rem;color:var(--text-tertiary);">Venc: {{ p.data_vencimento.strftime('%d/%m/%Y') }}</small>
+            <div>
+                {% if p.comprovante_url %}
+                    {% if p.comprovante_url.startswith('Comprovante automático') %}
+                    <span class="badge" style="background:var(--bg-elevated);color:var(--text-secondary);font-size:0.6rem;"><i class="bi bi-robot me-1"></i>Auto</span>
+                    {% elif p.comprovante_url.startswith('Comprovante manual') %}
+                    <span class="badge" style="background:var(--warning-soft);color:var(--warning);font-size:0.6rem;"><i class="bi bi-hand-index me-1"></i>Manual</span>
+                    {% else %}
+                    <span class="badge" style="background:var(--info-soft);color:var(--info);font-size:0.6rem;"><i class="bi bi-paperclip me-1"></i>Anexado</span>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="d-flex gap-1">
+            {% if p.comprovante_url and not p.comprovante_url.startswith('Comprovante') %}
+            <button type="button" class="btn btn-sm btn-outline-light flex-grow-1 py-2" style="font-size:0.75rem;" data-bs-toggle="modal" data-bs-target="#verComprovanteModal{{ p.id }}">
+                <i class="bi bi-file-earmark-text me-1"></i> Ver Recibo
+            </button>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-warning py-2" style="font-size:0.75rem;" data-bs-toggle="modal" data-bs-target="#desfazerModal{{ p.id }}">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-light py-2" style="font-size:0.75rem;" data-bs-toggle="modal" data-bs-target="#editarModal{{ p.id }}">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger py-2" style="font-size:0.75rem;" data-bs-toggle="modal" data-bs-target="#apagarModal{{ p.id }}">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-calendar-x"></i>
+        <h5>Nenhuma conta paga</h5>
+        <p>Nenhuma conta encontrada para este filtro.</p>
+        <a class="btn btn-primary" href="{{ url_for('nova_pendencia_form', tipo='pago') }}">Registrar pagamento</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('listar_historico') }}">Limpar filtros</a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- VISÃO DESKTOP -->
+<div class="card d-none d-md-block animate-in">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Credor</th>
+                    <th>Valor</th>
+                    <th>Vencimento</th>
+                    <th>Pagamento</th>
+                    <th class="text-center">Comprovante</th>
+                    <th class="text-end" style="padding-right:1rem;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pagos %}
+                <tr>
+                    <td>
+                        <span style="font-weight:600;">{{ p.credor }}</span>
+                        {% if p.observacao %}
+                        <small style="display:block;color:var(--text-tertiary);font-size:0.75rem;">{{ p.observacao }}</small>
+                        {% endif %}
+                    </td>
+                    <td style="font-weight:600;">R$ {{ (p.valor)|moeda }}</td>
+                    <td style="color:var(--text-tertiary);">{{ p.data_vencimento.strftime('%d/%m/%Y') }}</td>
+                    <td style="color:var(--success);font-weight:500;">
+                        <i class="bi bi-check-circle-fill me-1"></i>{{ p.data_pagamento.strftime('%d/%m/%Y') if p.data_pagamento else '-' }}
+                    </td>
+                    <td class="text-center">
+                        {% if p.comprovante_url %}
+                            {% if p.comprovante_url.startswith('Comprovante automático') %}
+                            <span class="badge" style="background:var(--bg-elevated);color:var(--text-secondary);"><i class="bi bi-robot me-1"></i>Auto</span>
+                            {% elif p.comprovante_url.startswith('Comprovante manual') %}
+                            <span class="badge" style="background:var(--warning-soft);color:var(--warning);"><i class="bi bi-hand-index me-1"></i>Manual</span>
+                            {% else %}
+                            <button type="button" class="btn btn-sm btn-outline-light" style="font-size:0.75rem;" data-bs-toggle="modal" data-bs-target="#verComprovanteModal{{ p.id }}">
+                                <i class="bi bi-file-earmark-text me-1"></i> Ver
+                            </button>
+                            {% endif %}
+                        {% else %}
+                        <span style="color:var(--text-tertiary);font-size:0.8rem;">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end" style="padding-right:1rem;">
+                        <button type="button" class="btn btn-sm btn-outline-warning me-1" style="font-size:0.75rem;" data-bs-toggle="modal" data-bs-target="#desfazerModal{{ p.id }}">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light me-1" style="font-size:0.75rem;" data-bs-toggle="modal" data-bs-target="#editarModal{{ p.id }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;" data-bs-toggle="modal" data-bs-target="#apagarModal{{ p.id }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-5" style="color:var(--text-tertiary);">
+                        <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
+                        Nenhuma conta paga no histórico. <a href="{{ url_for('nova_pendencia_form', tipo='pago') }}">Registrar pagamento</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAIS -->
+{% for p in pagos %}
+    {% if p.comprovante_url and not p.comprovante_url.startswith('Comprovante') %}
+    <div class="modal fade" id="verComprovanteModal{{ p.id }}" tabindex="-1" aria-hidden="true" aria-labelledby="verComprovanteModal{{ p.id }}-titulo">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="verComprovanteModal{{ p.id }}-titulo"><i class="bi bi-file-earmark-text me-2" style="color:var(--info);"></i>{{ p.credor }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.75rem;">
+                        R$ {{ (p.valor)|moeda }} · {{ p.data_pagamento.strftime('%d/%m/%Y') if p.data_pagamento else '-' }}
+                    </p>
+                    {% if p.comprovante_url.lower().endswith('.pdf') %}
+                    <iframe src="{{ url_for('visualizar_comprovante', id=p.id) }}" style="width:100%;height:480px;border:none;border-radius:var(--radius-md);"></iframe>
+                    {% else %}
+                    <img src="{{ url_for('visualizar_comprovante', id=p.id) }}" class="img-fluid rounded" style="max-height:500px;" alt="Comprovante">
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <a href="{{ url_for('visualizar_comprovante', id=p.id) }}" target="_blank" class="btn btn-outline-light"><i class="bi bi-box-arrow-up-right me-1"></i> Nova aba</a>
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="modal fade" id="desfazerModal{{ p.id }}" tabindex="-1" aria-hidden="true" aria-labelledby="desfazerModal{{ p.id }}-titulo">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" style="color:var(--warning);" id="desfazerModal{{ p.id }}-titulo"><i class="bi bi-arrow-counterclockwise me-2"></i>Desfazer Pagamento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size:0.9rem;">Desfazer pagamento de <strong>{{ p.credor }}</strong> (R$ {{ (p.valor)|moeda }})?</p>
+                    <p style="font-size:0.8rem;color:var(--text-tertiary);margin:0;">A conta voltará para Contas a pagar em Aberto.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+                    <form method="POST" action="{{ url_for('desfazer_historico', id=p.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-warning">Desfazer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editarModal{{ p.id }}" tabindex="-1" aria-hidden="true" aria-labelledby="editarModal{{ p.id }}-titulo">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="editarModal{{ p.id }}-titulo">Editar Comprovante</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <form method="POST" action="{{ url_for('editar_comprovante', id=p.id) }}" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-body">
+                        <p style="font-size:0.9rem;margin-bottom:1rem;"><strong>{{ p.credor }}</strong> — R$ {{ (p.valor)|moeda }}</p>
+                        <div class="mb-3">
+                            <label class="form-label">Observação</label>
+                            <textarea class="form-control" name="observacao" rows="2" placeholder="Comentário...">{{ p.observacao or '' }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Novo comprovante</label>
+                            <input type="file" class="form-control" name="comprovante" accept=".pdf,.jpg,.jpeg,.png,image/*" capture="environment">
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="semAnexo{{ p.id }}" name="sem_anexo" value="true">
+                            <label class="form-check-label" for="semAnexo{{ p.id }}" style="font-size:0.85rem;color:var(--text-secondary);">Marcar como manual (sem anexo)</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="apagarModal{{ p.id }}" tabindex="-1" aria-hidden="true" aria-labelledby="apagarModal{{ p.id }}-titulo">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" style="color:var(--danger);" id="apagarModal{{ p.id }}-titulo"><i class="bi bi-exclamation-triangle me-2"></i>Apagar Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size:0.9rem;">Apagar permanentemente <strong>{{ p.credor }}</strong> — R$ {{ (p.valor)|moeda }}?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+                    <form method="POST" action="{{ url_for('apagar_historico', id=p.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger">Apagar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+{% endblock %}

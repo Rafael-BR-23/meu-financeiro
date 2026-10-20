@@ -1,0 +1,546 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - Meu Financeiro{% endblock %}
+{% macro moeda(valor) -%}
+{{ '{:,.2f}'.format(valor).replace(',', '_').replace('.', ',').replace('_', '.') }}
+{%- endmacro %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <span class="page-eyebrow">SEU DINHEIRO, COM CLAREZA</span>
+        <h1>Visão geral</h1>
+        <p>Acompanhe hoje. Planeje o amanhã.</p>
+    </div>
+    <a href="{{ url_for('nova_pendencia_form') }}" class="btn btn-primary d-inline-flex align-items-center gap-2" style="border-radius:var(--radius-full); padding: 0.55rem 1.15rem;">
+        <i class="bi bi-plus-lg"></i> Adicionar conta
+    </a>
+</div>
+
+<section class="finance-overview mb-3" aria-label="Resumo financeiro">
+    <article class="stat-card balance-card">
+        <span class="stat-label">{{ resumo.saldo_titulo }}</span>
+        <div class="stat-value {{ 'text-danger' if resumo.saldo_extrato < 0 else '' }}">R$ {{ moeda(resumo.saldo_extrato) }}</div>
+        <div class="balance-footer">
+            <span class="stat-sub">{{ resumo.saldo_referencia }}</span>
+            <a href="{{ url_for('listar_transacoes') }}">Ver extrato <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+        </div>
+        {% if resumo.data_importacao %}<small class="statement-import">Importado em {{ resumo.data_importacao.strftime('%d/%m/%Y') }}</small>{% endif %}
+    </article>
+    <article class="stat-card">
+        <span class="stat-label">Contas a pagar</span>
+        <div class="stat-value">R$ {{ moeda(resumo.total_aberto) }}</div>
+        <p class="stat-sub">{{ resumo.contas_abertas + resumo.contas_atrasadas }} conta(s) pendente(s) · todos os vencimentos</p>
+        <a class="metric-link" href="{{ url_for('listar_pendencias') }}">Consultar contas <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </article>
+    <article class="stat-card projection-card">
+        <span class="stat-label">Estimativa após pagamentos</span>
+        {% if resumo.saldo_apos_contas is not none %}
+        <div class="stat-value {{ 'text-danger' if resumo.saldo_apos_contas < 0 else '' }}">R$ {{ moeda(resumo.saldo_apos_contas) }}</div>
+        <p class="stat-sub">{{ 'As contas superam o saldo do extrato.' if resumo.saldo_apos_contas < 0 else 'Saldo do extrato menos contas pendentes.' }}</p>
+        {% else %}
+        <div class="stat-value">—</div>
+        <p class="stat-sub">Importe um extrato com saldo final para calcular.</p>
+        {% endif %}
+    </article>
+</section>
+<p class="projection-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span><strong>Como calculamos:</strong> saldo do último extrato menos todas as contas ainda abertas, inclusive atrasadas e futuras. A estimativa não atualiza o saldo com movimentações posteriores ao extrato.</span></p>
+
+<section class="card p-3 p-md-4 mb-4" id="proximos-vencimentos" aria-labelledby="titulo-vencimentos">
+    <div class="card__head">
+        <div><h2 class="card__title" id="titulo-vencimentos">Próximos vencimentos</h2><p class="card__hint mb-0">Atrasadas e contas até {{ limite_vencimentos.strftime('%d/%m/%Y') }}</p></div>
+        <a class="btn btn-outline-light btn-sm" href="{{ url_for('listar_pendencias') }}">Ver todas</a>
+    </div>
+    {% if alertas %}
+    <ul class="bill-list">
+        {% for alerta in alertas %}
+        <li class="bill-row" data-status="{{ 'overdue' if alerta.classe == 'danger' else 'soon' }}">
+            <div class="bill-row__info">
+                <h3 class="bill-row__title">{{ alerta.credor }}</h3>
+                <div class="bill-row__meta"><span class="pill {{ 'pill-overdue' if alerta.classe == 'danger' else 'pill-soon' }}">{{ alerta.tipo }}</span><span>{{ alerta.vencimento.strftime('%d/%m/%Y') }}</span></div>
+            </div>
+            <div class="bill-row__side">
+                <span class="bill-row__amount">R$ {{ moeda(alerta.valor) }}</span>
+                <button class="btn btn-outline-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#modalPagar" data-id="{{ alerta.id }}" data-credor="{{ alerta.credor }}" data-valor="{{ alerta.valor }}" aria-label="Registrar pagamento de {{ alerta.credor }}">Registrar pagamento</button>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state py-3"><i class="bi bi-check2-circle text-success" aria-hidden="true"></i><h3 class="h6 mt-2">Nenhum vencimento próximo</h3><p>Não há contas atrasadas ou vencendo nos próximos sete dias.</p><a class="btn btn-primary" href="{{ url_for('nova_pendencia_form') }}">Adicionar conta</a></div>
+    {% endif %}
+</section>
+
+<nav class="dashboard-shortcuts" aria-label="Atalhos financeiros">
+    <a href="{{ url_for('importar_page') }}"><i class="bi bi-arrow-down-up"></i><span>Importar extrato</span><i class="bi bi-chevron-right"></i></a>
+    <a href="{{ url_for('listar_historico') }}"><i class="bi bi-receipt"></i><span>Comprovantes</span><i class="bi bi-chevron-right"></i></a>
+    <a href="{{ url_for('relatorios') }}"><i class="bi bi-bar-chart-line"></i><span>Relatórios</span><i class="bi bi-chevron-right"></i></a>
+</nav>
+
+<div class="overview-secondary mb-4" aria-label="Atividade do mês e metas">
+    <a href="{{ url_for('listar_transacoes', mes=hoje.strftime('%Y-%m')) }}"><span>Gastos em {{ hoje.strftime('%m/%Y') }}</span><strong>R$ {{ moeda(resumo.gastos_mes) }}</strong></a>
+    <a href="{{ url_for('listar_metas') }}"><span>Metas em andamento</span><strong>{{ resumo.metas_em_andamento }}</strong></a>
+</div>
+
+<!-- Fechamento do Mês (Adaptativo) -->
+<div id="fechamentoMesSection" data-state="loading" aria-busy="true" class="mb-4">
+    <p role="status" class="small text-secondary">Carregando resumo...</p>
+    <div id="fechamentoMesDados" hidden class="card card-fechamento border-0 overflow-hidden animate-in">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="brand-icon" style="width:30px;height:30px;font-size:0.85rem;"><i class="bi bi-calendar-check"></i></span>
+                    <div>
+                        <span class="stat-label mb-0" style="color:var(--accent);">Fechamento Mensal</span>
+                        <div id="fechamentoMesNome" style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);"></div>
+                    </div>
+                </div>
+                <i class="bi bi-shield-check" style="font-size:1.4rem;color:var(--accent);opacity:0.8;"></i>
+            </div>
+            <div class="row g-2">
+                <div class="col-6 col-sm-3">
+                    <div class="p-2 p-md-3 rounded-3" style="background:var(--bg-subtle);border:1px solid var(--border);">
+                        <small style="font-size:0.65rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Saldo Inicial</small>
+                        <div style="font-size:0.95rem;font-weight:700;" class="tabular-nums" id="fechamentoSaldoInicial"></div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="p-2 p-md-3 rounded-3" style="background:var(--success-soft);border:1px solid var(--border);">
+                        <small style="font-size:0.65rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Entradas</small>
+                        <div style="font-size:0.95rem;font-weight:700;color:var(--success);" class="tabular-nums" id="fechamentoEntradas"></div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="p-2 p-md-3 rounded-3" style="background:var(--danger-soft);border:1px solid var(--border);">
+                        <small style="font-size:0.65rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Saídas</small>
+                        <div style="font-size:0.95rem;font-weight:700;color:var(--danger);" class="tabular-nums" id="fechamentoSaidas"></div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="p-2 p-md-3 rounded-3" style="background:var(--bg-subtle);border:1px solid var(--border);">
+                        <small style="font-size:0.65rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Saldo Final</small>
+                        <div style="font-size:0.95rem;font-weight:700;" class="tabular-nums" id="fechamentoSaldoFinal"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-lg-8">
+        <div id="componente-evolucao" data-state="loading" aria-busy="true" class="card p-3 p-md-4 animate-in">
+            <h2 id="titulo-evolucao" class="fw-bold mb-3 d-flex align-items-center gap-2" style="font-size:0.92rem;">
+                <i class="bi bi-graph-up" style="color:var(--accent);"></i> Evolução Financeira
+                <small style="font-size:0.75rem;color:var(--text-tertiary);font-weight:500;">(Últimos 6 meses)</small>
+            </h2>
+            <div style="min-height:220px;position:relative;">
+                <canvas id="graficoEvolucao" role="img" aria-labelledby="titulo-evolucao" aria-describedby="resumo-evolucao" height="200"></canvas>
+            </div>
+            <p role="status" class="small text-secondary">Carregando resumo...</p>
+            <details class="chart-values mt-2">
+                <summary class="small text-secondary">Ver valores</summary>
+                <div class="chart-summary small mt-2" id="resumo-evolucao"></div>
+            </details>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div id="componente-gastos" data-state="loading" aria-busy="true" class="card p-3 p-md-4 animate-in">
+            <h2 id="titulo-gastos" class="fw-bold mb-3 d-flex align-items-center gap-2" style="font-size:0.92rem;">
+                <i class="bi bi-pie-chart" style="color:var(--warning);"></i> Gastos por Categoria
+                <small id="mesGraficoGastos" style="font-size:0.75rem;color:var(--text-tertiary);font-weight:500;"></small>
+            </h2>
+            <div style="min-height:220px;position:relative;">
+                <canvas id="graficoGastos" role="img" aria-labelledby="titulo-gastos" aria-describedby="resumo-gastos" height="200"></canvas>
+            </div>
+            <p role="status" class="small text-secondary">Carregando resumo...</p>
+            <details class="chart-values mt-2">
+                <summary class="small text-secondary">Ver valores</summary>
+                <div class="chart-summary small mt-2" id="resumo-gastos"></div>
+            </details>
+        </div>
+    </div>
+</div>
+
+<!-- Progresso das metas -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div id="componente-metas" data-state="loading" aria-busy="true" class="card p-3 p-md-4 animate-in">
+            <h2 id="titulo-metas" class="fw-bold mb-3 d-flex align-items-center gap-2" style="font-size:0.92rem;">
+                <i class="bi bi-trophy" style="color:var(--success);"></i> Progresso das Metas
+            </h2>
+            <div style="min-height:160px;position:relative;">
+                <canvas id="graficoMetas" role="img" aria-labelledby="titulo-metas" aria-describedby="resumo-metas" height="150"></canvas>
+            </div>
+            <p role="status" class="small text-secondary">Carregando resumo...</p>
+            <details class="chart-values mt-2">
+                <summary class="small text-secondary">Ver valores</summary>
+                <div class="chart-summary small mt-2" id="resumo-metas"></div>
+            </details>
+        </div>
+    </div>
+</div>
+
+<!-- Sugestões + Últimas Transações -->
+<div class="row g-3">
+    {% if sugestoes_metas %}
+    <div class="col-12 col-lg-6">
+        <div class="card p-3 p-md-4 animate-in">
+            <h6 class="fw-bold mb-3 d-flex align-items-center gap-2" style="font-size:0.92rem;">
+                <i class="bi bi-lightbulb" style="color:var(--accent);"></i> Sugestões de Aporte
+            </h6>
+            {% for s in sugestoes_metas %}
+            <div class="list-row-item d-flex align-items-start gap-3 {% if not loop.last %}border-bottom{% endif %}" style="border-color:var(--border) !important;">
+                <div style="width:34px;height:34px;min-width:34px;border-radius:var(--radius-md);background:var(--accent-soft);display:flex;align-items:center;justify-content:center;">
+                    <i class="bi {{ s.icone }}" style="font-size:0.9rem;color:var(--accent);"></i>
+                </div>
+                <div>
+                    <div style="font-size:0.875rem;font-weight:600;">{{ s.nome }}</div>
+                    <div style="font-size:0.77rem;color:var(--text-secondary);margin-top:2px;">
+                        {% if s.prioridade == 'alta' %}
+                            <span class="badge" style="background:var(--danger-soft);color:var(--danger);font-size:0.6rem;">{{ s.prioridade }}</span>
+                        {% elif s.prioridade == 'media' %}
+                            <span class="badge" style="background:var(--warning-soft);color:var(--warning);font-size:0.6rem;">{{ s.prioridade }}</span>
+                        {% else %}
+                            <span class="badge" style="background:var(--info-soft);color:var(--info);font-size:0.6rem;">{{ s.prioridade }}</span>
+                        {% endif %}
+                        {% if s.sugestao.mensal is defined %}R$ {{ s.sugestao.mensal|moeda }} / mês sugeridos. {% endif %}{{ s.sugestao.mensagem }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="col-12 {{ 'col-lg-6' if sugestoes_metas else '' }}">
+        <div class="card p-3 p-md-4 animate-in">
+            <h6 class="fw-bold mb-3 d-flex align-items-center gap-2" style="font-size:0.92rem;">
+                <i class="bi bi-clock-history" style="color:var(--info);"></i> Últimas Transações
+            </h6>
+            {% if ultimas_transacoes %}
+            <div class="d-flex flex-column gap-1">
+                {% for t in ultimas_transacoes %}
+                {% set cat_nome = (t.categoria.nome if t.categoria else '') | lower %}
+                {% set desc = t.descricao | lower %}
+                {% if t.valor >= 0 or 'salario' in cat_nome or 'rendimento' in cat_nome %}
+                    {% set bg = 'rgba(16, 185, 129, 0.15)' %}
+                    {% set col = '#10b981' %}
+                    {% set ico = 'bi-arrow-down-left' %}
+                {% elif 'aliment' in cat_nome or 'restaurante' in cat_nome or 'ifood' in desc or 'padaria' in desc %}
+                    {% set bg = 'rgba(249, 115, 22, 0.15)' %}
+                    {% set col = '#f97316' %}
+                    {% set ico = 'bi-cup-hot-fill' %}
+                {% elif 'mercado' in cat_nome or 'supermercado' in cat_nome or 'mercado' in desc %}
+                    {% set bg = 'rgba(16, 185, 129, 0.15)' %}
+                    {% set col = '#10b981' %}
+                    {% set ico = 'bi-cart-fill' %}
+                {% elif 'transporte' in cat_nome or 'uber' in cat_nome or 'uber' in desc or 'gas' in desc %}
+                    {% set bg = 'rgba(6, 182, 212, 0.15)' %}
+                    {% set col = '#06b6d4' %}
+                    {% set ico = 'bi-car-front-fill' %}
+                {% elif 'lazer' in cat_nome or 'streaming' in cat_nome or 'netflix' in desc or 'spotify' in desc %}
+                    {% set bg = 'rgba(168, 85, 247, 0.15)' %}
+                    {% set col = '#a855f7' %}
+                    {% set ico = 'bi-controller' %}
+                {% elif 'saude' in cat_nome or 'farmacia' in cat_nome or 'drogaria' in desc %}
+                    {% set bg = 'rgba(244, 63, 94, 0.15)' %}
+                    {% set col = '#f43f5e' %}
+                    {% set ico = 'bi-heart-pulse-fill' %}
+                {% elif 'moradia' in cat_nome or 'casa' in cat_nome %}
+                    {% set bg = 'rgba(245, 158, 11, 0.15)' %}
+                    {% set col = '#f59e0b' %}
+                    {% set ico = 'bi-house-fill' %}
+                {% else %}
+                    {% set bg = 'rgba(244, 63, 94, 0.12)' if t.valor < 0 else 'rgba(16, 185, 129, 0.12)' %}
+                    {% set col = 'var(--danger)' if t.valor < 0 else 'var(--success)' %}
+                    {% set ico = 'bi-arrow-up-right' if t.valor < 0 else 'bi-arrow-down-left' %}
+                {% endif %}
+                <div class="list-row-item d-flex align-items-center justify-content-between {% if not loop.last %}border-bottom{% endif %}" style="border-color:var(--border) !important;padding:0.7rem 0.4rem;">
+                    <div class="d-flex align-items-center gap-3" style="min-width:0;">
+                        <div class="category-bubble" style="width:38px;height:38px;min-width:38px;font-size:1rem;background:{{ bg }};color:{{ col }};">
+                            <i class="bi {{ ico }}"></i>
+                        </div>
+                        <div style="min-width:0;">
+                            <div style="font-size:0.88rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;color:var(--text-primary);">{{ t.descricao }}</div>
+                            <div class="d-flex align-items-center gap-2 mt-0">
+                                <small style="font-size:0.7rem;color:var(--text-tertiary);">{{ t.data.strftime('%d/%m/%Y') }}</small>
+                                {% if t.categoria %}
+                                <span class="badge" style="background:var(--accent-soft);color:var(--accent);font-size:0.65rem;padding:0.12rem 0.45rem;">{{ t.categoria.nome }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <span class="tabular-nums" style="font-size:0.92rem;font-weight:800;color:{{ 'var(--success)' if t.valor >= 0 else 'var(--danger)' }};white-space:nowrap;">
+                        <small>{{ 'Entrada' if t.valor >= 0 else 'Saída' }}</small> {{ '+' if t.valor >= 0 else '' }}R$ {{ (t.valor)|moeda }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state" style="padding:1.5rem 0;">
+                <i class="bi bi-inbox"></i>
+                <p class="mb-0">Nenhuma transação importada ainda.</p>
+                <a class="btn btn-primary" href="{{ url_for('importar_page') }}">Importar primeiro extrato</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% include '_pagamento.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const chartFont = { family: "'Fraunces', Georgia, serif" };
+    let chartEvolucaoInstance = null;
+    let chartGastosInstance = null;
+    let chartMetasInstance = null;
+
+    function chartOptions(options = {}) {
+        return { responsive: true, maintainAspectRatio: false, ...options,
+                 animation: reducedMotion.matches ? false : undefined };
+    }
+
+    function formatMoney(value) {
+        return Number(value).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+    }
+
+    function renderSummary(id, labels, describe) {
+        const table = document.createElement('table');
+        table.className = 'table table-sm mb-0';
+        const body = document.createElement('tbody');
+        labels.forEach((label, index) => {
+            const row = document.createElement('tr');
+            const heading = document.createElement('th');
+            heading.setAttribute('scope', 'row');
+            heading.textContent = label;
+            const value = document.createElement('td');
+            value.className = 'text-end tabular-nums';
+            value.textContent = describe(index);
+            row.appendChild(heading);
+            row.appendChild(value);
+            body.appendChild(row);
+        });
+        table.appendChild(body);
+        document.getElementById(id).replaceChildren(table);
+    }
+
+    async function carregarComponente(url, render, containerId) {
+        const container = document.getElementById(containerId);
+        const status = container.querySelector('[role="status"]');
+        container.dataset.state = 'loading';
+        container.setAttribute('aria-busy', 'true');
+        status.textContent = 'Carregando resumo…';
+        try {
+            const response = await fetch(url, {headers: {'Accept': 'application/json'}});
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            const empty = render(data) === false;
+            container.dataset.state = empty ? 'empty' : 'ready';
+            status.textContent = empty ? 'Nenhum dado disponível para este resumo.' : '';
+        } catch (error) {
+            container.dataset.state = 'error';
+            status.textContent = 'Não foi possível carregar este resumo. Tente atualizar a página.';
+        } finally {
+            container.removeAttribute('aria-busy');
+        }
+    }
+
+    function getChartThemeColors() {
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        return {
+            grid: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(43, 38, 32, 0.07)',
+            tick: isDark ? '#94a3b8' : '#8a8578',
+            doughnutBorder: isDark ? '#14181f' : '#fffdf7',
+            metaTargetBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 38, 32, 0.08)',
+            entrada: isDark ? '#4a8a75' : '#2f6f5e',
+            saida: isDark ? '#d29a85' : '#b0705a',
+            meta: isDark ? '#d4b26b' : '#a5822f',
+            gastosPalette: isDark
+                ? ['#4a8a75', '#d29a85', '#d4b26b', '#6cab90', '#c9a38f', '#8a8f98', '#5c8c7a', '#c9906f']
+                : ['#2f6f5e', '#b0705a', '#a5822f', '#6b8f5f', '#c98a6b', '#8a8578', '#5c8c7a', '#d29a85']
+        };
+    }
+
+    function renderFechamento(dadosFechamento) {
+        if (!dadosFechamento || !dadosFechamento.mes) return false;
+        if (dadosFechamento && dadosFechamento.mes) {
+            document.getElementById('fechamentoMesDados').hidden = false;
+            const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            document.getElementById('fechamentoMesSection').style.display = 'block';
+            document.getElementById('fechamentoMesNome').textContent = `${meses[dadosFechamento.mes - 1]}/${dadosFechamento.ano}`;
+            document.getElementById('fechamentoSaldoInicial').textContent = `R$ ${dadosFechamento.saldo_inicial.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+            document.getElementById('fechamentoEntradas').textContent = `R$ ${dadosFechamento.total_entradas.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+            document.getElementById('fechamentoSaidas').textContent = `R$ ${dadosFechamento.total_saidas.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+            const sf = dadosFechamento.saldo_final.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+            document.getElementById('fechamentoSaldoFinal').innerHTML = `<span style="color:${dadosFechamento.saldo_final >= 0 ? 'var(--success)' : 'var(--danger)'}">R$ ${sf}</span>`;
+        }
+
+        return true;
+    }
+
+    function renderEvolucao(dadosSaldo) {
+        const colors = getChartThemeColors();
+        renderSummary('resumo-evolucao', dadosSaldo.labels, i => `Entradas: ${formatMoney(dadosSaldo.entradas[i])}; Saídas: ${formatMoney(dadosSaldo.saidas[i])}`);
+        if (!dadosSaldo.labels.length) return false;
+        // 1. Gráfico de Evolução (Bar)
+        const ctxEvolucao = document.getElementById('graficoEvolucao');
+        if (ctxEvolucao) {
+            if (chartEvolucaoInstance) chartEvolucaoInstance.destroy();
+            chartEvolucaoInstance = new Chart(ctxEvolucao, {
+                type: 'bar',
+                data: {
+                    labels: dadosSaldo.labels,
+                    datasets: [
+                        { label: 'Entradas', data: dadosSaldo.entradas, backgroundColor: colors.entrada, borderRadius: 6, borderSkipped: false },
+                        { label: 'Saídas', data: dadosSaldo.saidas, backgroundColor: colors.saida, borderRadius: 6, borderSkipped: false }
+                    ]
+                },
+                options: chartOptions({
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: colors.tick, font: chartFont, boxWidth: 12, padding: 14 } }
+                    },
+                    scales: {
+                        x: { ticks: { color: colors.tick, font: chartFont }, grid: { color: colors.grid } },
+                        y: {
+                            ticks: {
+                                color: colors.tick,
+                                font: chartFont,
+                                callback: v => 'R$ ' + v.toLocaleString('pt-BR')
+                            },
+                            grid: { color: colors.grid }
+                        }
+                    }
+                })
+            });
+        }
+
+        return true;
+    }
+
+    function renderGastos(dadosGastos) {
+        const colors = getChartThemeColors();
+        renderSummary('resumo-gastos', dadosGastos.labels, i => formatMoney(dadosGastos.valores[i]));
+        if (!dadosGastos.labels.length || !dadosGastos.valores.some(value => Number(value) > 0)) return false;
+        // 2. Gastos (Doughnut)
+        const ctxGastos = document.getElementById('graficoGastos');
+        if (ctxGastos) {
+            document.getElementById('mesGraficoGastos').textContent = dadosGastos.mes ? `(${dadosGastos.mes})` : '';
+            if (chartGastosInstance) chartGastosInstance.destroy();
+            chartGastosInstance = new Chart(ctxGastos, {
+                type: 'doughnut',
+                data: {
+                    labels: dadosGastos.labels,
+                    datasets: [{
+                        data: dadosGastos.valores,
+                        backgroundColor: colors.gastosPalette,
+                        borderWidth: 3,
+                        borderColor: colors.doughnutBorder
+                    }]
+                },
+                options: chartOptions({
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: colors.tick, font: { ...chartFont, size: 11 }, padding: 12, boxWidth: 10 }
+                        },
+                        tooltip: {
+                            callbacks: { label: ctx => ` ${ctx.label}: R$ ${ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}` }
+                        }
+                    },
+                    cutout: '68%'
+                })
+            });
+        }
+
+        return true;
+    }
+
+    function renderMetas(dadosMetas) {
+        const colors = getChartThemeColors();
+        renderSummary('resumo-metas', dadosMetas.labels, i => `Atual: ${formatMoney(dadosMetas.atuais[i])}; Objetivo: ${formatMoney(dadosMetas.objetivos[i])}`);
+        if (!dadosMetas.labels.length) return false;
+        // 3. Metas (Horizontal Bar)
+        const ctxMetas = document.getElementById('graficoMetas');
+        if (ctxMetas) {
+            if (chartMetasInstance) chartMetasInstance.destroy();
+            chartMetasInstance = new Chart(ctxMetas, {
+                type: 'bar',
+                data: {
+                    labels: dadosMetas.labels,
+                    datasets: [
+                        { label: 'Atual', data: dadosMetas.atuais, backgroundColor: colors.meta, borderRadius: 6, borderSkipped: false },
+                        { label: 'Objetivo', data: dadosMetas.objetivos, backgroundColor: colors.metaTargetBg, borderRadius: 6, borderSkipped: false }
+                    ]
+                },
+                options: chartOptions({
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: colors.tick, font: chartFont, boxWidth: 12, padding: 14 } }
+                    },
+                    scales: {
+                        x: { ticks: { color: colors.tick, font: chartFont }, grid: { color: colors.grid } },
+                        y: { ticks: { color: colors.tick, font: chartFont }, grid: { color: colors.grid } }
+                    }
+                })
+            });
+        }
+    }
+
+    // Atualiza cores dos gráficos em tempo real quando o tema muda
+    window.addEventListener('themechange', () => {
+        const colors = getChartThemeColors();
+        
+        if (chartEvolucaoInstance) {
+            chartEvolucaoInstance.data.datasets[0].backgroundColor = colors.entrada;
+            chartEvolucaoInstance.data.datasets[1].backgroundColor = colors.saida;
+            chartEvolucaoInstance.options.scales.x.ticks.color = colors.tick;
+            chartEvolucaoInstance.options.scales.x.grid.color = colors.grid;
+            chartEvolucaoInstance.options.scales.y.ticks.color = colors.tick;
+            chartEvolucaoInstance.options.scales.y.grid.color = colors.grid;
+            chartEvolucaoInstance.options.plugins.legend.labels.color = colors.tick;
+            chartEvolucaoInstance.update();
+        }
+
+        if (chartGastosInstance) {
+            chartGastosInstance.data.datasets[0].backgroundColor = colors.gastosPalette;
+            chartGastosInstance.data.datasets[0].borderColor = colors.doughnutBorder;
+            chartGastosInstance.options.plugins.legend.labels.color = colors.tick;
+            chartGastosInstance.update();
+        }
+
+        if (chartMetasInstance) {
+            chartMetasInstance.data.datasets[0].backgroundColor = colors.meta;
+            chartMetasInstance.data.datasets[1].backgroundColor = colors.metaTargetBg;
+            chartMetasInstance.options.scales.x.ticks.color = colors.tick;
+            chartMetasInstance.options.scales.x.grid.color = colors.grid;
+            chartMetasInstance.options.scales.y.ticks.color = colors.tick;
+            chartMetasInstance.options.scales.y.grid.color = colors.grid;
+            chartMetasInstance.options.plugins.legend.labels.color = colors.tick;
+            chartMetasInstance.update();
+        }
+    });
+
+    carregarComponente('/api/dados_saldo', renderEvolucao, 'componente-evolucao');
+    carregarComponente('/api/dados_gastos', renderGastos, 'componente-gastos');
+    carregarComponente('/api/dados_metas', renderMetas, 'componente-metas');
+    carregarComponente('/api/fechamento_mes', renderFechamento, 'fechamentoMesSection');
+
+    reducedMotion.addEventListener('change', () => {
+        for (const chart of [chartEvolucaoInstance, chartGastosInstance, chartMetasInstance]) {
+            if (!chart) continue;
+            chart.stop();
+            chart.options.animation = reducedMotion.matches ? false : {};
+            chart.update('none');
+        }
+    });
+</script>
+{% endblock %}

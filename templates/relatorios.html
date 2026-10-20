@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% block title %}Relatórios - Meu Financeiro{% endblock %}
+
+{% block content %}
+<div class="page-header mb-3">
+    <h1>Relatórios</h1>
+    <p>Análise de gastos por categoria</p>
+</div>
+
+<!-- Filtro -->
+<div class="card p-3 mb-3 animate-in">
+    <form method="GET" action="{{ url_for('relatorios') }}">
+        <div class="row g-2 align-items-end">
+            <div class="col-5 col-sm-4">
+                <label for="relatorio-mes" class="form-label" style="font-size:0.75rem;">Mês</label>
+                <select id="relatorio-mes" name="mes" class="form-select">
+                    {% set meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'] %}
+                    {% for i in range(1, 13) %}
+                    <option value="{{ i }}" {% if mes_selecionado == i %}selected{% endif %}>{{ meses[i-1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-4 col-sm-4">
+                <label for="relatorio-ano" class="form-label" style="font-size:0.75rem;">Ano</label>
+                <select id="relatorio-ano" name="ano" class="form-select">
+                    {% for ano in anos_disponiveis %}
+                    <option value="{{ ano }}" {% if ano_selecionado == ano %}selected{% endif %}>{{ ano }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-3 col-sm-4">
+                <button type="submit" class="btn btn-primary w-100" style="border-radius:var(--radius-md);">
+                    <i class="bi bi-filter"></i> <span class="d-none d-sm-inline">Filtrar</span>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% if dados %}
+<!-- Gráfico -->
+<div class="card p-3 p-md-4 mb-3 animate-in">
+    <h2 id="titulo-distribuicao" class="fw-bold mb-3 d-flex align-items-center gap-2" style="font-size:0.92rem;">
+        <i class="bi bi-pie-chart" style="color:var(--warning);"></i> Distribuição de Gastos
+    </h2>
+    <div class="d-flex justify-content-center py-2" style="position:relative;min-height:280px;">
+        <canvas id="graficoPizza" role="img" aria-labelledby="titulo-distribuicao" aria-describedby="detalhamento-categorias" style="max-width:360px;max-height:360px;"></canvas>
+    </div>
+</div>
+
+<!-- Tabela -->
+<div id="detalhamento-categorias" class="card p-3 p-md-4 animate-in">
+    <h2 class="fw-bold mb-3 d-flex align-items-center gap-2" style="font-size:0.92rem;">
+        <i class="bi bi-table" style="color:var(--info);"></i> Detalhamento por Categoria
+    </h2>
+
+    <!-- Mobile: Cards -->
+    <div class="d-md-none">
+        {% for item in dados %}
+        <div class="d-flex align-items-center justify-content-between py-2.5 {% if not loop.last %}border-bottom{% endif %}" style="border-color:var(--border) !important;padding-top:0.6rem;padding-bottom:0.6rem;">
+            <div class="d-flex align-items-center gap-2.5">
+                <div style="width:12px;height:12px;border-radius:50%;background:{{ item.cor }};box-shadow:0 0 8px {{ item.cor }}44;"></div>
+                <span style="font-size:0.875rem;font-weight:600;">{{ item.categoria }}</span>
+            </div>
+            <div class="text-end">
+                <div class="tabular-nums" style="font-size:0.9rem;font-weight:700;">R$ {{ (item.total)|moeda }}</div>
+                <small class="tabular-nums" style="font-size:0.72rem;color:var(--text-tertiary);font-weight:600;">{{ "%.1f"|format(item.percentual) }}%</small>
+            </div>
+        </div>
+        {% endfor %}
+        <div class="d-flex justify-content-between align-items-center pt-3 mt-2 border-top" style="border-color:var(--border) !important;">
+            <span style="font-weight:800;font-size:0.95rem;">Total Geral</span>
+            <span class="tabular-nums" style="font-weight:800;font-size:1.1rem;color:var(--accent);">R$ {{ (total_geral)|moeda }}</span>
+        </div>
+    </div>
+
+    <!-- Desktop: Tabela -->
+    <div class="table-responsive d-none d-md-block">
+        <table class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Categoria</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">%</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in dados %}
+                <tr>
+                    <td>
+                        <span class="badge" style="background:{{ item.cor }};color:#fff;box-shadow:0 2px 6px {{ item.cor }}33;">{{ item.categoria }}</span>
+                    </td>
+                    <td class="text-end fw-bold tabular-nums">R$ {{ (item.total)|moeda }}</td>
+                    <td class="text-end tabular-nums text-secondary fw-medium">{{ "%.1f"|format(item.percentual) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="border-top:2px solid var(--border);">
+                    <td class="fw-bold">Total Geral</td>
+                    <td class="text-end fw-bold tabular-nums" style="color:var(--accent);font-size:1.05rem;">R$ {{ (total_geral)|moeda }}</td>
+                    <td class="text-end fw-bold">100%</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card animate-in">
+    <div class="empty-state">
+        <i class="bi bi-exclamation-circle"></i>
+        <h5>Nenhum dado disponível</h5>
+        <p>Não há transações registradas para o período selecionado.</p>
+        <a class="btn btn-primary" href="{{ url_for('importar_page') }}">Importar extrato</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if dados %}
+<script>
+    let chartPizza = null;
+
+    function getPizzaThemeColors() {
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        return {
+            border: isDark ? '#14181f' : '#ffffff',
+            tick: isDark ? '#94a3b8' : '#64748b'
+        };
+    }
+
+    function initPizzaChart() {
+        const colors = getPizzaThemeColors();
+        const ctx = document.getElementById('graficoPizza');
+        if (!ctx) return;
+
+        if (chartPizza) chartPizza.destroy();
+
+        chartPizza = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ labels|tojson }},
+                datasets: [{
+                    data: {{ valores|tojson }},
+                    backgroundColor: ['#f59e0b','#10b981','#38bdf8','#f43f5e','#8b5cf6','#fbbf24','#ec4899','#14b8a6','#f97316','#06b6d4'],
+                    borderWidth: 3,
+                    borderColor: colors.border
+                }]
+            },
+            options: {
+                animation: reducedMotion.matches ? false : undefined,
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: colors.tick,
+                            font: { family: "'Fraunces', Georgia, serif", size: 11 },
+                            padding: 14,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: 8
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.label}: R$ ${ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`
+                        }
+                    }
+                },
+                cutout: '62%'
+            }
+        });
+    }
+
+    window.addEventListener('themechange', () => {
+        const colors = getPizzaThemeColors();
+        if (chartPizza) {
+            chartPizza.data.datasets[0].borderColor = colors.border;
+            chartPizza.options.plugins.legend.labels.color = colors.tick;
+            chartPizza.update();
+        }
+    });
+
+    reducedMotion.addEventListener('change', initPizzaChart);
+    initPizzaChart();
+</script>
+{% endif %}
+{% endblock %}

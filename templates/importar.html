@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Extrato - Meu Financeiro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+
+        <div class="page-header">
+            <h1>Importar Extrato</h1>
+            <p>Upload do extrato Nubank (PDF ou CSV)</p>
+        </div>
+
+        <div class="card p-3 mb-3 animate-in">
+            <form action="{{ url_for('importar_arquivo') }}" method="POST" enctype="multipart/form-data" data-import-form data-submit-feedback>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label class="form-label">Arquivo do Extrato</label>
+                    <input type="file" class="form-control" name="extrato" accept=".csv,.pdf" required>
+                    <small class="form-text">Extrato Nubank em PDF ou CSV, até 10 MB.</small>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2" style="border-radius:999px;">
+                    <i class="bi bi-cloud-arrow-up me-1"></i> Importar extrato
+                </button>
+            </form>
+        </div>
+
+        <div class="card p-3 animate-in" style="background:var(--info-soft);border:1px solid rgba(96,165,250,0.2);">
+            <h6 style="font-size:0.85rem;font-weight:600;color:var(--info);margin-bottom:0.5rem;">
+                <i class="bi bi-info-circle me-1"></i> Como funciona?
+            </h6>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin:0;line-height:1.5;">
+                O sistema lê as transações do extrato e procura pendências com valores e datas correspondentes.
+                Ao terminar, você verá quantas transações foram adicionadas ou identificadas como duplicadas, e poderá conferir a lista de transações.
+            </p>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

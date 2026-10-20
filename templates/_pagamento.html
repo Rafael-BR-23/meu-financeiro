@@ -1,0 +1,50 @@
+<!-- MODAL: Pagar Pendência -->
+<div class="modal fade" id="modalPagar" tabindex="-1" aria-labelledby="tituloModalPagar" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="tituloModalPagar">Registrar Pagamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="formPagar" action="" method="POST" enctype="multipart/form-data" data-submit-feedback>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p style="font-size:0.9rem;margin-bottom:1rem;">
+                        <strong id="modalCredor"></strong> — <strong id="modalValor" style="color:var(--accent);"></strong>
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label" for="data_pagamento">Data de Pagamento</label>
+                        <input type="date" class="form-control" id="data_pagamento" name="data_pagamento" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="comprovante">Comprovante (foto ou PDF)</label>
+                        <input type="file" class="form-control" id="comprovante" name="comprovante" accept="image/*,application/pdf" capture="environment">
+                        <small class="form-text">No celular, use a câmera para fotografar o recibo.</small>
+                    </div>
+                    <hr style="border-color:var(--border);">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="repetirProximo" name="repetir_proximo" value="1">
+                        <label class="form-check-label" for="repetirProximo" style="font-size:0.85rem;color:var(--text-secondary);">Repetir para o próximo mês</label>
+                    </div>
+                    <div id="proximoMesFields" style="display:none;">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label" for="proximo_vencimento" style="font-size:0.75rem;">Vencimento</label>
+                                <input type="date" class="form-control form-control-sm" id="proximo_vencimento" name="proximo_vencimento">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="proximo_valor" style="font-size:0.75rem;">Valor</label>
+                                <input type="text" inputmode="numeric" data-currency-input class="form-control form-control-sm" id="proximo_valor" name="proximo_valor">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script src="{{ url_for('static', filename='pagamento.js') }}" defer></script>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0c0e12">
+    <link rel="icon" href="/icon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <title>{% block titulo %}{{ 'Criar senha' if senha_google else ('Criar conta' if cadastro else 'Entrar') }}{% endblock %} · Meu Financeiro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&amp;family=Karla:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: light dark;
+            --font-display: 'Fraunces', Georgia, serif;
+            --font-body: 'Karla', sans-serif;
+            --bg-base: #f7f4ee;
+            --bg-surface: #fffdf7;
+            --text-primary: #2b2620;
+            --text-secondary: #5c574e;
+            --accent: #2f6f5e;
+            --accent-hover: #26594c;
+            --border: rgba(43, 38, 32, 0.18);
+            --border-focus: #2f6f5e;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-base: #0c0e12;
+                --bg-surface: #14181f;
+                --text-primary: #f8fafc;
+                --text-secondary: #94a3b8;
+                --accent: #4a8a75;
+                --accent-hover: #5aa585;
+                --border: rgba(255, 255, 255, 0.16);
+                --border-focus: #80c8ad;
+            }
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px; font-family: var(--font-body); color: var(--text-primary); background: var(--bg-base); }
+        main { width: 100%; max-width: 440px; padding: 40px 30px; border: 1px solid var(--border); border-radius: 24px; background: var(--bg-surface); box-shadow: 0 24px 80px #0002; }
+        .brand { color: var(--text-primary); font-weight: 700; letter-spacing: .04em; }
+        h1 { font-family: var(--font-display); font-variation-settings: 'SOFT' 60, 'WONK' 1; font-weight: 700; font-size: 30px; margin: 32px 0 12px; }
+        p { color: var(--text-secondary); line-height: 1.6; }
+        button { width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 28px; padding: 15px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-base); color: var(--text-primary); font: 600 16px var(--font-body); cursor: pointer; }
+        button:hover { background: var(--bg-surface); }
+        :where(a, button, input):focus-visible { outline: 3px solid var(--border-focus); outline-offset: 4px; }
+        button:disabled { opacity: .5; cursor: not-allowed; }
+        .note { font-size: 13px; margin-top: 24px; }
+        .alert { padding: 12px; border: 1px solid var(--border-focus); border-radius: 8px; color: var(--text-primary); font-size: 14px; }
+        label { display: block; margin: 16px 0 6px; font-size: 14px; }
+        input { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 13px; background: var(--bg-base); color: var(--text-primary); font: inherit; }
+        .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .primary:hover { background: var(--accent-hover); }
+        a { color: var(--text-primary); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+        .separator { text-align: center; margin: 22px 0 0; color: var(--text-secondary); font-size: 13px; }
+        @media (max-width: 380px) { main { padding: 28px 20px; } h1 { font-size: 26px; } }
+    </style>
+</head>
+<body>
+<main>
+    <div class="brand">Meu Financeiro</div>
+    {% block formulario %}
+    <h1>{{ 'Crie sua senha.' if senha_google else ('Crie sua conta.' if cadastro else 'Suas finanças,') }}{% if not cadastro and not senha_google %}<br>em um só lugar.{% endif %}</h1>
+    <p>{{ 'Seu Google já está vinculado. Crie uma senha para também entrar com e-mail e senha.' if senha_google else ('Comece a organizar suas finanças com um espaço só seu.' if cadastro else 'Entre para acompanhar seus gastos, pagamentos e metas.') }}</p>
+    {% if limite_atingido %}<p class="alert" role="alert">Muitas tentativas. Aguarde um minuto e tente novamente.</p>{% endif %}
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+    <p class="alert" {% if category == 'success' %}role="status" aria-live="polite"{% else %}role="alert"{% endif %}>{{ message }}</p>
+    {% endfor %}
+    <form action="{{ url_for('auth.criar_senha') if senha_google else (url_for('auth.cadastro') if cadastro else url_for('auth.login')) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if cadastro %}<label for="nome">Seu nome</label><input id="nome" name="nome" autocomplete="name" maxlength="100" value="{{ request.form.get('nome', '') }}" required>{% endif %}
+        <label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="email" maxlength="254" value="{{ user.email if senha_google else request.form.get('email', '') }}" {% if senha_google %}readonly{% endif %} required>
+        <label for="senha">Senha</label><input id="senha" name="senha" type="password" autocomplete="{{ 'new-password' if cadastro or senha_google else 'current-password' }}" {% if cadastro or senha_google %}minlength="8"{% endif %} maxlength="128" required>
+        {% if cadastro or senha_google %}<label for="confirmacao">Confirme a senha</label><input id="confirmacao" name="confirmacao" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>{% endif %}
+        <button class="primary" type="submit">{{ 'Salvar senha e continuar' if senha_google else ('Criar conta' if cadastro else 'Entrar') }}</button>
+    </form>
+    {% if not cadastro and not senha_google %}<p style="text-align:right"><a href="{{ url_for('auth.esqueci_senha') }}">Esqueci minha senha</a></p>{% endif %}
+    {% if not senha_google %}
+    <p class="separator">ou continue com Google</p>
+    <form action="{{ url_for('auth.google_login') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" {% if not configurado %}disabled{% endif %}>
+            <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M43.6 24.5c0-1.5-.1-2.9-.4-4.3H24v8.2h11a9.4 9.4 0 0 1-4.1 6.2v5h6.6c3.9-3.6 6.1-8.9 6.1-15.1z"/><path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.9l-6.6-5c-1.8 1.2-4.1 2-6.9 2-5.3 0-9.8-3.6-11.4-8.4H5.8v5.2A20.4 20.4 0 0 0 24 44z"/><path fill="#FBBC05" d="M12.6 27.7a12 12 0 0 1 0-7.4v-5.2H5.8a20 20 0 0 0 0 17.8z"/><path fill="#EA4335" d="M24 11.9c3 0 5.6 1 7.7 3l5.8-5.8A19.5 19.5 0 0 0 24 4 20.4 20.4 0 0 0 5.8 15.1l6.8 5.2A12 12 0 0 1 24 11.9z"/></svg>
+            Entrar com Google
+        </button>
+    </form>
+    {% if not configurado %}<p class="note" role="status">A entrada pelo Google estará disponível após a configuração do administrador.</p>{% endif %}
+    <p>{{ 'Já tem uma conta?' if cadastro else 'Ainda não tem uma conta?' }} <a href="{{ url_for('auth.login') if cadastro else url_for('auth.cadastro') }}">{{ 'Entrar' if cadastro else 'Criar conta' }}</a></p>
+    {% endif %}
+    <p class="note">Você continuará conectado neste navegador por até 30 dias após o último acesso. Use “Sair” quando quiser encerrar a sessão.</p>
+    {% endblock %}
+</main>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});</script>
+</body>
+</html>
